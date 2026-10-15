@@ -2,6 +2,8 @@ import {esc,fmt} from './render.js';
 import {convolution,trainingPreview,mlpForward} from './deep-learning-math.js';
 import {transformer,targetVocabulary} from './transformer-math.js';
 import {numberGrid as grid,convolutionView as convView,convolutionTrace,attentionView,attentionTrace,attentionDetails,attentionExamples,attentionSteps} from './calculation-stories.js';
+import {networkView,networkResult,networkStages,inspectNetwork,pcaView,pcaResult,pcaCompare,diffusionView,diffusionCompare} from './model-stories.js';
+import {diffusionBatch,seededRandom,normal} from './sequence-generative-math.js';
 
 const purple='#670875',orange='#bb592c';
 const pick=(key,value,label,selected=false,extra='')=>`<button type="button" data-lab-set="${key}" data-value="${esc(value)}" aria-pressed="${selected}" ${extra}>${label}</button>`;
@@ -49,14 +51,14 @@ export function enhanceLabs(definitions){
   definitions[id]={...base,
    initial:()=>({...base.initial(),viewStep:0,...config.defaults}),
    controls:[...(config.controls||[]),...base.controls],
-   normalize:config.normalize,prepareSetup:config.prepareSetup,
+   normalize:config.normalize||base.normalize,prepareSetup:config.prepareSetup,
    describe:config.describe||base.describe,
    visible:config.visible||base.visible,
    bounds:(s,k)=>config.bounds?.(s,k)??base.bounds?.(s,k),
    change(s,k){if(config.change)config.change(s,k,base);else base.change?.(s,k)},
    render(s){return config.visual(s)+detail('Inspect the full calculation',config.details?config.details(s,base):base.render(s))},
    guide:config,
-   action(s,a){base.action?.(s,a)},
+   action(s,a){if(config.action)config.action(s,a,base);else base.action?.(s,a)},
   };
  };
  attach('dl-convolution',{
@@ -68,6 +70,8 @@ export function enhanceLabs(definitions){
   describe(s){const t=convolutionTrace(s);return s.playMode==='Scan image'?`Output ${s.cell}: ${fmt(t.activated,4)}.`:`Output ${s.cell}, step ${t.step} of 11. ${t.step===11?'Final output':'Running total'}: ${fmt(t.running,4)}.`},
   metrics(s){const t=convolutionTrace(s);return [{key:'raw',label:`Raw response at output ${s.cell}`,value:t.w.value},{key:'output',label:`Activated output ${s.cell}`,value:t.activated}]},
   arrays:[['image','Input pixels'],['weights','Kernel weights']],
+  timeline:{max:s=>s.playMode==='Scan image'?convolutionTrace(s).r.windows.length-1:11,get:s=>s.playMode==='Scan image'?s.cell-1:s.convStep,seek(s,n){if(s.playMode==='Scan image')s.cell=n+1;else s.convStep=n},label:s=>s.playMode==='Scan image'?`Output ${s.cell} / ${convolutionTrace(s).r.windows.length}`:`Calculation step ${s.convStep} / 11`},
+  compare(before,after){const output=s=>convolutionTrace(s).r.out.map(row=>row.map(v=>s.relu==='On'?Math.max(0,v):v)),a=output(before),b=output(after);if(a.length!==b.length)return '<p>Output dimensions changed; cellwise differences are not shown.</p>';const delta=b.map((row,y)=>row.map((v,x)=>v-a[y][x]));return `<div class="visual-comparison">${grid(delta,{title:'Output change · current − pinned',scale:Math.max(1,...delta.flat().map(Math.abs))})}<p class="visual-key">Purple: increase · orange: decrease · white: unchanged. Same grid indices; stride or padding changes can alter their input patches.</p></div>`},
   label:'Slide one shared filter across the image',
   play:{label:'Animate convolution',finished:s=>s.playMode==='Scan image'?s.cell>=convolutionTrace(s).r.windows.length:s.convStep>=11,
    restart(s){if(s.playMode==='Scan image')s.cell=1;s.convStep=0},
@@ -87,17 +91,20 @@ export function enhanceLabs(definitions){
   details:(s,base)=>s.attentionExample==='Full Transformer'?base.render(s):attentionDetails(s),
   describe(s){const {h,keys}=attentionTrace(s),count=Math.min(s.mixCount,keys.length),total=h.v[0].map((_,c)=>h.v.slice(0,count).reduce((sum,v,j)=>sum+v[c]*h.weights[s.query][j],0));return `Query ${s.query}. ${attentionSteps[s.viewStep]}.${s.viewStep===4?` ${count} of ${keys.length} contributions added. Total ${vector(total)}.`:''}`},
   metrics(s){const {h,keys}=attentionTrace(s),q=s.query;return [...keys.map((k,j)=>({key:'weight'+j,label:`Query ${q} → key ${j} (${k})`,value:h.weights[q][j]*100,unit:'%'})),...h.mixed[q].map((v,j)=>({key:'value'+j,label:`Output coordinate ${j+1}`,value:v}))]},
+  timeline:{max:s=>4+attentionTrace(s).keys.length,get:s=>s.viewStep+(s.viewStep===4?s.mixCount:0),seek(s,n){s.viewStep=Math.min(4,n);s.mixCount=Math.max(0,n-4)},label:s=>s.viewStep<4?attentionSteps[s.viewStep]:`Value contributions ${s.mixCount} / ${attentionTrace(s).keys.length}`},
+  compare(before,after){const a=attentionTrace(before),b=attentionTrace(after);if(a.keys.length!==b.keys.length)return '<p>Key counts differ; compare the labeled results below.</p>';return `<div class="visual-comparison"><p><strong>Attention weight changes</strong> · percentage points, current − pinned</p>${b.keys.map((key,i)=>{const delta=100*(b.h.weights[after.query][i]-a.h.weights[before.query][i]);return `<div class="attention-delta"><span>${esc(a.keys[i]===key?key:a.keys[i]+' → '+key)}</span><div class="signed-score-track ${delta<0?'is-negative':''}"><span style="left:${delta<0?50+delta/2:50}%;width:${Math.abs(delta)/2}%"></span></div><strong>${delta>0?'+':''}${fmt(delta,2)} pp</strong></div>`}).join('')}<p class="visual-key">Fixed scale −100 to +100 pp. Compare the selected query and token labels when changing examples.</p></div>`},
   label:'Follow one query through attention',
   play:{label:'Walk through attention',finished:s=>s.viewStep>=4&&s.mixCount>=attentionTrace(s).keys.length,
    restart(s){s.viewStep=0;s.mixCount=0},
    tick(s){if(this.finished(s))return false;if(s.viewStep<4)s.viewStep++;else s.mixCount++;return true}},
   prediction:{question:'With the decoder causal mask on, will changing future token 2 alter query 0’s output? This check uses a controlled decoder example.',options:[['unchanged','It stays the same'],['changed','It changes']],
-   run(s){Object.assign(s,{attentionExample:'Full Transformer',stage:'Decoder self-attention',query:0,causal:true,future:false,viewStep:4,mixCount:3});const before=attentionTrace(s).h.mixed[0];s.future=true;const after=attentionTrace(s).h.mixed[0];return {answer:before.every((v,i)=>Math.abs(v-after[i])<1e-12)?'unchanged':'changed',text:`Before ${vector(before)} → after ${vector(after)}. Query 0 assigns zero weight to future keys. Turn off the mask in Explore to test leakage.`}}}
+   run(s){Object.assign(s,{attentionExample:'Full Transformer',stage:'Decoder self-attention',query:0,causal:true,future:false,viewStep:4,mixCount:3});const before=attentionTrace(s).h.mixed[0];s.future=true;const after=attentionTrace(s).h.mixed[0];return {answer:before.every((v,i)=>Math.abs(v-after[i])<1e-12)?'unchanged':'changed',text:`Before ${vector(before)} → after ${vector(after)}. Query 0 assigns zero weight to future keys. Turn off the mask to test leakage.`}}}
  });
  attach('dl-training',{
   primary:['eta','kind','batch'],visual:trainingView,snapshot:(s,peer)=>trainingView(s,false,peer),
   metrics(s){const r=trainingPreview(s);return [{key:'train',label:'Train loss',value:r.full.loss},{key:'validation',label:'Validation loss',value:r.validation.loss},{key:'accuracy',label:'Train accuracy',value:r.full.accuracy*100,unit:'%'},{key:'updates',label:'Batch updates',value:s.model.updates}]},
   arrays:[['model.weights','Fitted weights']],
+  compare(before,after){const deltas=Array.from({length:20},(_,y)=>Array.from({length:20},(_,x)=>{const p=[-1.2+(x+.5)*.12,1.2-(y+.5)*.12];return mlpForward(after.model.weights,p).p-mlpForward(before.model.weights,p).p}));return `<div class="visual-comparison"><p><strong>Prediction change across the input field</strong></p><svg viewBox="0 0 240 245" class="probability-difference" role="img" aria-label="Change in probability of class 1, current minus pinned; fixed axes from minus 1.2 to 1.2.">${deltas.map((row,y)=>row.map((v,x)=>`<rect x="${20+x*10}" y="${10+y*10}" width="10.1" height="10.1" fill="${v>=0?purple:orange}" opacity="${Math.abs(v)}"><title>Input ${fmt(-1.2+(x+.5)*.12,2)}, ${fmt(1.2-(y+.5)*.12,2)}: change ${fmt(v,5)}</title></rect>`).join('')).join('')}<path d="M20 10V210H220" fill="none" stroke="#96819c"/><g font-size="12" fill="#655b68"><text x="20" y="228">−1.2</text><text x="200" y="228">1.2</text><text x="113" y="243">x₁</text></g></svg><p class="visual-key">Purple: higher p(class 1) · orange: lower · white: unchanged. Full color = probability change of 1; vertical x₂ also spans −1.2 to 1.2.</p></div>`},
   label:'Watch the boundary learn from data',
   play:{label:'Train with animation',tick(s){const before=s.model.updates;definitions['dl-training'].action(s,'step');return s.model.updates>before}},
   prediction:{question:'After one batch update, what will happen to the loss on that same batch?',options:directionOptions,
@@ -107,7 +114,38 @@ export function enhanceLabs(definitions){
   primary:['source','causal'],visual:architectureView,snapshot:s=>architectureView(s,false),
   metrics(s){const r=transformer(s.source.split(' '),s.future?['<bos>','como','azul']:['<bos>','como','estas'],{heads:s.heads,usePositions:s.positions,causal:s.causal,scale:s.scale});return r.probabilities[0].map((v,j)=>({key:'p'+j,label:`Query 0 · ${targetVocabulary[j]}`,value:v*100,unit:'%'}))},
   label:'Trace the encoder and decoder',
+  timeline:{max:()=>13,get:s=>stageNames.indexOf(s.stage),seek(s,n){s.stage=stageNames[n]},label:s=>`${stageNames.indexOf(s.stage)+1} / 14 · ${s.stage}`},
   play:{label:'Trace computation',finished:s=>s.stage===stageNames.at(-1),restart(s){s.stage=stageNames[0]},tick(s){const i=stageNames.indexOf(s.stage);if(i>=stageNames.length-1)return false;s.stage=stageNames[i+1];return true}}
+ });
+ attach('dl-network',{
+  primary:['preset','eta','target'],defaults:{networkStep:0,inspectNetwork:null},normalize(s){s.networkStep??=0;s.inspectNetwork??=null},
+  label:'Trace the forward and backward passes',visual:networkView,snapshot:s=>networkView(s,false),inspect:inspectNetwork,
+  change(s,k,base){base.change?.(s,k);s.networkStep=0;s.inspectNetwork=null},
+  action(s,a,base){base.action(s,a);s.networkStep=0;s.inspectNetwork=null},
+  describe:s=>`${networkStages[s.networkStep]}. Loss ${fmt(networkResult(s).loss,6)}; ${s.updates} applied updates.`,
+  timeline:{max:()=>7,get:s=>s.networkStep,seek(s,n){s.networkStep=n;s.inspectNetwork=null},label:s=>`${s.networkStep+1} / 8 · ${networkStages[s.networkStep]}`},
+  play:{label:'Trace backpropagation',finished:s=>s.networkStep===7,restart(s){s.networkStep=0;s.inspectNetwork=null},tick(s){if(s.networkStep===7)return false;s.networkStep++;s.inspectNetwork=null;return true}},
+  metrics(s){const r=networkResult(s);return [{key:'prediction',label:'Output',value:r.y},{key:'loss',label:'Squared loss',value:r.loss},...r.gradient.map((v,i)=>({key:'g'+i,label:`∂L/∂w${i+1}`,value:v}))]},
+ });
+ attach('pca',{
+  primary:['dataset','scale'],defaults:{pcaPoint:0},normalize(s){s.pcaPoint??=0},visible:(s,k)=>k!=='angle',
+  label:'Rotate the projection and measure what remains',visual:pcaView,snapshot:(s,peer)=>pcaView(s,false,peer),compare:pcaCompare,
+  change(s,k){if(k==='dataset')s.pcaPoint=0},inspect(s,key){if(/^p\d+$/.test(key)&&Number(key.slice(1))<pcaResult(s).scores.length)s.pcaPoint=Number(key.slice(1))},
+  timeline:{max:()=>179.99,step:.01,get:s=>s.angle,seek(s,n){s.angle=n},label:s=>`Projection angle ${fmt(s.angle,2)}° · ${fmt(pcaResult(s).fraction*100,2)}% retained`},
+  play:{label:'Rotate the projection',finished:s=>s.angle>=179.99,restart(s){s.angle=0},tick(s){if(s.angle>=179.99)return false;s.angle=Math.min(179.99,s.angle+5);return true}},
+  metrics(s){const r=pcaResult(s);return [{key:'variance',label:'Retained variance',value:r.fraction*100,unit:'%'},{key:'error',label:'Mean squared reconstruction error',value:r.discarded}]},
+ });
+ const diffusion=definitions['sg-diffusion'];
+ attach('sg-diffusion',{
+  primary:['predictor','condition','sampleSeed'],defaults:{diffusionPoint:null},
+  normalize(s){s.diffusionPoint??=null;if(s.start!==null&&(!Array.isArray(s.noise)||s.noise.length!==11)){const random=seededRandom(s.sampleSeed);normal(random);s.noise=Array.from({length:11},()=>normal(random))}delete s.random},
+  label:'Follow a sampled reverse chain',visual:diffusionView,snapshot:(s,peer)=>diffusionView(s,false,peer),compare:diffusionCompare,
+  inspect(s,key){if(/^t\d+$/.test(key)&&Number(key.slice(1))<=s.chain.length)s.diffusionPoint=Number(key.slice(1))},
+  change(s,k,base){base.change?.(s,k);s.diffusionPoint=null},action(s,a,base){base.action(s,a);s.diffusionPoint=null},
+  timeline:{max:()=>12,get:s=>s.chain.length,seek(s,n){diffusion.action(s,'start');for(let i=0;i<n;i++)diffusion.action(s,'reverse');s.diffusionPoint=null},label:s=>`Reverse transition ${s.chain.length} / 12 · t = ${s.next}`},
+  play:{label:'Animate reverse diffusion',finished:s=>s.next===0,restart(s){diffusion.action(s,'start');s.diffusionPoint=null},tick(s){if(s.next===0)return false;diffusion.action(s,'reverse');s.diffusionPoint=null;return true}},
+  arrays:[['weights','Noise-prediction coefficients']],
+  metrics:s=>[{key:'train',label:'Training noise MSE',value:diffusionBatch(s.weights,s.data).loss},{key:'held',label:'Held-out noise MSE',value:diffusionBatch(s.weights,s.validation).loss},{key:'current',label:`Generated state at t=${s.next}`,value:s.current}],
  });
  // Keep all existing k-means calculations and comparisons; add direct selection.
  const k=definitions.kmeans;

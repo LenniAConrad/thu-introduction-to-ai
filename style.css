@@ -1091,3 +1091,47 @@ button.array-cell:hover{box-shadow:inset 0 0 0 2px #b296bd;z-index:1}
 .array-differences>summary{font-size:.78rem;color:#6b4a79}
 @container experiment (max-width:650px){.calculation-story>.stage-explanation{min-height:5.1em}.attention-flow{gap:12px}.attention-connection{padding:5px 6px}}
 @container experiment (max-width:380px){.calculation-progress{font-size:.7rem;gap:10px}.calculation-progress progress{width:26%}.calculation-story>.stage-explanation{min-height:0}.difference-table{font-size:.72rem}.difference-table th,.difference-table td{padding:8px}}
+
+/* Inspectable model calculations: space for the diagram, one optional explanation. */
+.calculation-timeline{display:block;margin:4px 0 18px;padding:13px 16px;background:#f7f2f9;border-radius:8px}
+.calculation-timeline>span{display:block;font-size:.8rem;color:#63436e;font-variant-numeric:tabular-nums;margin-bottom:9px}
+.calculation-timeline input{display:block;width:100%;height:24px;margin:0;accent-color:#187d86;cursor:ew-resize}
+.enhanced-lab .prediction-card>summary,.experiment-reflect>summary{font-size:.84rem;font-weight:600;color:#63436e;cursor:pointer}
+.enhanced-lab .prediction-card{padding:16px 20px}
+.experiment-reflect{margin:16px 0 0;padding:14px 0;border:0;background:transparent}
+.experiment-reflect p{font-size:.9rem;line-height:1.7}
+.model-story-plot{display:block;width:100%;height:auto;max-width:600px;margin:0 auto;overflow:visible}
+.model-story-plot text{fill:#5d4668;font:14px system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.model-story-plot [role=button]{cursor:pointer}
+.model-story-plot [role=button]:focus-visible{outline:none;filter:drop-shadow(0 0 3px #187d86)}
+.network-node circle{fill:#faf7fc;stroke:#c6b4cf;stroke-width:2;transition:fill 300ms ease,stroke 300ms ease}
+.network-node.is-computed circle{fill:#eee1f3;stroke:#9560a4}
+.network-node:hover circle{stroke:#187d86;stroke-width:3}
+.network-edge line,.network-edge path{transition:stroke 300ms ease}
+.story-inspector{padding:16px 20px;background:#f3f7f6;border-left:3px solid #187d86;border-radius:0 8px 8px 0;line-height:1.8;font-size:.85rem;overflow-wrap:anywhere}
+.story-inspector>strong{color:#155e64}.story-inspector>p{margin:6px 0 0;font-size:inherit!important;line-height:inherit}
+.story-values{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:16px 0}
+.story-values button{padding:12px 5px;border:1px solid #d8c7e0;border-radius:7px;background:white;color:#623d70}
+.story-values button[aria-pressed=true]{background:#e7f3f0;border-color:#187d86}
+.story-values small{display:block;margin-top:6px;font-size:.65rem}
+.pca-stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:center;margin:10px 0 20px}
+.variance-chart{margin:24px 0 0}.variance-chart figcaption{font-size:.78rem;font-weight:600;color:#61476b}
+.pca-observation circle,.pca-observation rect{transition:cx 350ms ease,cy 350ms ease,x 350ms ease,y 350ms ease}
+.pca-observation line{transition:x2 350ms ease,y2 350ms ease}
+.visual-comparison{padding:18px;margin:15px 0;background:#faf7fb;border:1px solid #e2d6e7;border-radius:9px}
+.visual-comparison>p{font-size:.84rem;line-height:1.7}.visual-comparison>.interactive-array{max-width:290px;margin:auto}
+.attention-delta{display:grid;grid-template-columns:minmax(60px,1fr) minmax(80px,3fr) minmax(80px,1fr);gap:12px;align-items:center;font-size:.8rem}
+.attention-delta>strong{text-align:right;font-variant-numeric:tabular-nums}
+.probability-difference{display:block;width:100%;max-width:310px;margin:auto}
+.snapshot .pca-stage{grid-template-columns:1fr}.snapshot .story-inspector{padding:12px;font-size:.74rem}
+@container experiment (max-width:650px){.pca-stage{grid-template-columns:1fr;gap:12px}.pca-stage>.model-story-plot{max-width:390px}.story-values{grid-template-columns:repeat(3,minmax(0,1fr))}.story-inspector{padding:14px 16px}.model-story-plot text{font-size:15px}}
+@container experiment (max-width:380px){.calculation-timeline{padding:12px}.attention-delta{gap:6px;font-size:.72rem}.visual-comparison{padding:12px}.model-story-plot text{font-size:17px}.network-story .model-story-plot{min-height:190px}}
+@media(prefers-reduced-motion:reduce){.model-story-plot *{transition:none!important;animation:none!important}}
+@media print{.calculation-timeline,.story-values{display:none}}
+
+.course-provenance{font-size:.82rem;color:#685b6e;line-height:1.7;margin:15px 0 0}
+
+.network-edge text{paint-order:stroke;stroke:white;stroke-width:4px;stroke-linejoin:round}
+.pca-story .model-story-plot line{transition:x1 350ms ease,y1 350ms ease,x2 350ms ease,y2 350ms ease}
+.diffusion-story .model-story-plot g{animation:calculation-arrive 350ms ease-out}
+@media(prefers-reduced-motion:reduce){.pca-story .model-story-plot line{transition:none!important}.diffusion-story .model-story-plot g{animation:none!important}}

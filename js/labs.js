@@ -86,12 +86,13 @@ export function mountLab(host,id,{session=null,setup=null}={}){
  const win=host.ownerDocument.defaultView,doc=host.ownerDocument,guide=def.guide;
  const saved=session?.read('lab:'+id);
  let state=def.initial(),pinned=null,drag=null,timer=null,saveTimer=null,disposed=false,steps=[],playing=false,playCount=0;
- let prediction=null,answer=null,mode='guided';
+ let prediction=null,answer=null,mode='guided',seeking=false;
  if(saved){try{def.normalize?.(saved.state);if(saved.pinned)def.normalize?.(saved.pinned);def.render(saved.state);if(saved.pinned)def.render(saved.pinned);state=saved.state;pinned=saved.pinned||null;prediction=saved.prediction||null;answer=saved.answer||null;mode=saved.mode==='explore'?'explore':'guided'}catch{}}
  if(setup){state=applySetup(def,setup);pinned=null;prediction=answer=null}
  const primary=guide?.primary||def.controls.slice(0,3).map(c=>c.id);
  host.classList.add('enhanced-lab');
- host.innerHTML=`<div class="lab-heading"><div><span class="eyebrow">INTERACTIVE EXPERIMENT</span><h4>${esc(guide?.label||labCatalog.find(l=>l[0]===id)?.[1]||'Explore the model')}</h4></div><div class="lab-mode" role="group" aria-label="Experiment controls"><button type="button" data-ui="guided">Guided</button><button type="button" data-ui="explore">Explore</button></div></div><div class="lab-goal"><strong>Goal</strong><p>${esc(labGoals[id])}</p></div><div class="experiment-toolbar"><div class="playback-controls"><button type="button" class="button" data-ui="play" hidden>Play</button><button type="button" class="button subtle small" data-ui="back" disabled>Back</button><button type="button" class="button subtle small" data-ui="next" hidden>Next</button><label class="playback-speed" hidden>Speed <select data-ui="speed" aria-label="Playback speed"><option value="1">1×</option><option value="0.5">0.5×</option><option value="2">2×</option></select></label></div><div class="experiment-tools"><button type="button" class="button subtle small" data-ui="pin">Pin result</button><button type="button" class="button subtle small" data-ui="share">Share setup</button>${button('reset','Reset')}</div></div><p class="playback-status" role="status" data-play-status></p><div class="share-setup" hidden><label>Link to a fresh run with these controls<input type="text" readonly data-share-link></label><p>Trained weights, edited arrays, pinned results and predictions stay in this tab.</p></div><div class="native-lab"><div class="lab-controls" data-controls></div><div class="lab-result" data-result></div></div><div data-prediction></div><div data-comparison></div><p class="sr-only" data-plot-status role="status" aria-live="polite"></p>`;
+ const heading=host.closest('.inline-experiment')?'':`<div class="lab-heading"><h4>${esc(guide?.label||labCatalog.find(l=>l[0]===id)?.[1]||'Explore the model')}</h4></div><p class="lab-goal">${esc(labGoals[id])}</p>`;
+ host.innerHTML=`${heading}<div class="experiment-toolbar"><div class="playback-controls"><button type="button" class="button" data-ui="play" hidden>Play</button><button type="button" class="button subtle small" data-ui="back" disabled>Back</button><button type="button" class="button subtle small" data-ui="next" hidden>Next</button><label class="playback-speed" hidden>Speed <select data-ui="speed" aria-label="Playback speed"><option value="1">1×</option><option value="0.5">0.5×</option><option value="2">2×</option></select></label></div><div class="experiment-tools"><button type="button" class="button subtle small" data-ui="pin">Pin result</button><button type="button" class="button subtle small" data-ui="share">Share setup</button>${button('reset','Reset')}</div></div>${guide?.timeline?'<label class="calculation-timeline" hidden><span data-timeline-label>Calculation step</span><input type="range" data-ui="timeline" aria-label="Calculation step" min="0" value="0"></label>':''}<p class="playback-status" role="status" data-play-status></p><div class="share-setup" hidden><label>Link to a fresh run with these controls<input type="text" readonly data-share-link></label><p>Trained weights, edited arrays, pinned results and predictions stay in this tab.</p></div><div class="native-lab"><div class="lab-controls" data-controls></div><div class="lab-result" data-result></div></div><div data-prediction></div><div data-comparison></div><p class="sr-only" data-plot-status role="status" aria-live="polite"></p>`;
  const controls=host.querySelector('[data-controls]'),result=host.querySelector('[data-result]'),status=host.querySelector('[data-plot-status]');
  const ui=name=>host.querySelector(`[data-ui="${name}"]`);
  const playStatus=host.querySelector('[data-play-status]');
@@ -116,11 +117,11 @@ export function mountLab(host,id,{session=null,setup=null}={}){
   const box=host.querySelector('[data-comparison]');
   if(!pinned){box.innerHTML='';return}
   const params=value=>def.controls.filter(c=>primary.includes(c.id)).map(c=>`${c.label}: ${value[c.id]}`).join(' · ');
-  morph(box,`<section class="pinned-comparison"><header><div><span class="eyebrow">COMPARE RESULTS</span><h4>What changed?</h4></div><button type="button" class="button subtle small" data-ui="unpin">Remove pin</button></header>${comparisonDetails(def,pinned,state)}<div class="comparison-panels"><figure><figcaption>Pinned result</figcaption><p class="comparison-settings">${esc(params(pinned))}</p><div class="snapshot">${staticResult(pinned,state)}</div></figure><figure><figcaption>Current result</figcaption><p class="comparison-settings">${esc(params(state))}</p><div class="snapshot">${staticResult(state,pinned)}</div></figure></div></section>`);
+  morph(box,`<section class="pinned-comparison"><header><div><span class="eyebrow">COMPARE RESULTS</span><h4>What changed?</h4></div><button type="button" class="button subtle small" data-ui="unpin">Remove pin</button></header>${guide?.compare?.(pinned,state)||''}${comparisonDetails(def,pinned,state)}<div class="comparison-panels"><figure><figcaption>Pinned result</figcaption><p class="comparison-settings">${esc(params(pinned))}</p><div class="snapshot">${staticResult(pinned,state)}</div></figure><figure><figcaption>Current result</figcaption><p class="comparison-settings">${esc(params(state))}</p><div class="snapshot">${staticResult(state,pinned)}</div></figure></div></section>`);
  }
  function predictionHTML(){
   const p=guide?.prediction,box=host.querySelector('[data-prediction]');if(!p)return;
-  morph(box,`<section class="prediction-card"><span class="eyebrow">PREDICT → TEST → EXPLAIN</span><h4>${esc(p.question)}</h4><div class="prediction-choices" role="group" aria-label="Your prediction">${p.options.map(([v,t])=>`<button type="button" data-predict="${v}" aria-pressed="${prediction===v}">${t}</button>`).join('')}</div><button type="button" class="button small" data-ui="test-prediction" ${prediction===null?'disabled':''}>Test prediction</button><p data-prediction-feedback role="status">${answer?`${answer.correct?'Your prediction matched.':'A different result than predicted.'} ${esc(answer.text)}`:'Choose a prediction, then run the check. You can keep exploring without answering.'}</p></section>`);
+  morph(box,`<details class="prediction-card"><summary>Predict and test</summary><h4>${esc(p.question)}</h4><div class="prediction-choices" role="group" aria-label="Your prediction">${p.options.map(([v,t])=>`<button type="button" data-predict="${v}" aria-pressed="${prediction===v}">${t}</button>`).join('')}</div><button type="button" class="button small" data-ui="test-prediction" ${prediction===null?'disabled':''}>Test prediction</button><p data-prediction-feedback role="status">${answer?`${answer.correct?'Your prediction matched.':'A different result than predicted.'} ${esc(answer.text)}`:'Choose an answer, then test it.'}</p></details>`);
  }
  let playback=guide?.play;
  function draw(){
@@ -138,7 +139,9 @@ export function mountLab(host,id,{session=null,setup=null}={}){
   ui('next').disabled=!!playback?.finished?.(state);
   ui('play').textContent=playing?'Pause':playback?.finished?.(state)?'Replay':'Play';ui('play').setAttribute('aria-label',playing?'Pause animation':playback?.finished?.(state)?'Replay calculation':playback?.label||'Play');
   ui('play').setAttribute('aria-pressed',String(playing));ui('back').disabled=!steps.length;
-  for(const name of ['guided','explore'])ui(name).setAttribute('aria-pressed',String(mode===name));
+  const timeline=guide?.timeline;
+  if(timeline)host.querySelector('.calculation-timeline').hidden=false;
+  if(timeline){const slider=ui('timeline');slider.max=timeline.max(state);slider.step=timeline.step||1;slider.value=timeline.get(state);slider.setAttribute('aria-valuetext',timeline.label(state));host.querySelector('[data-timeline-label]').textContent=timeline.label(state)}
   host.dataset.mode=mode;host.dataset.playing=String(playing);
   compare();predictionHTML();scheduleSave();
  }
@@ -189,6 +192,12 @@ export function mountLab(host,id,{session=null,setup=null}={}){
  }
  const change=e=>{
   if(e.target.dataset.ui==='speed')return;
+  if(e.target.dataset.ui==='timeline'){
+   const n=Number(e.target.value);if(!guide?.timeline||!Number.isFinite(n))return;
+   stop('');if(!seeking){remember();seeking=true}
+   guide.timeline.seek(state,Math.max(0,Math.min(guide.timeline.max(state),n)));draw();
+   if(e.type==='change'){seeking=false;announce()}return;
+  }
   const el=e.target,key=el.dataset.param||el.dataset.direct;if(!key)return;
   // Native range input emits both input and change; calculate only the first.
   const value=el.type==='checkbox'?el.checked:el.type==='range'||el.type==='number'?Number(el.value):el.value;
@@ -197,13 +206,13 @@ export function mountLab(host,id,{session=null,setup=null}={}){
   stop('');setParam(key,value);if(e.type==='change')announce();
  };
  const action=e=>{
-  const el=e.target.closest('[data-lab-action],[data-ui],[data-lab-set],[data-predict]');if(!el||!host.contains(el))return;
+  const el=e.target.closest('[data-lab-action],[data-ui],[data-lab-set],[data-predict],[data-story-inspect]');if(!el||!host.contains(el))return;
   const name=el.dataset.ui;
-  if(name==='speed')return;
+  if(name==='speed'||name==='timeline')return;
+  if(el.dataset.storyInspect!==undefined){stop('');guide?.inspect?.(state,el.dataset.storyInspect);draw();announce();return}
   if(name==='play'){togglePlay();return}
   if(name==='next'){stop('One step.');advance();announce();return}
   if(name==='back'){stop('Previous state restored.');if(steps.length){state=steps.pop();draw();announce()}return}
-  if(name==='guided'||name==='explore'){mode=name;controls.querySelector('.advanced-controls').open=mode==='explore';draw();return}
   if(name==='pin'){pinned=copy(state);draw();playStatus.textContent='Result pinned below. Change a setting to compare.';return}
   if(name==='unpin'){pinned=null;draw();return}
   if(name==='share'){
@@ -216,9 +225,9 @@ export function mountLab(host,id,{session=null,setup=null}={}){
   if(name==='test-prediction'){if(prediction===null)return;stop('Prediction checked.');remember();const outcome=guide.prediction.run(state);answer={...outcome,correct:outcome.answer===prediction};draw();announce();return}
   if(el.dataset.labSet){stop('');setParam(el.dataset.labSet,el.dataset.value);announce();return}
   const a=el.dataset.labAction;if(!a)return;
-  stop('');remember();
+  stop('');
   if(a==='reset'){state=def.initial();prediction=answer=null;steps=[];makeControls();playStatus.textContent='Experiment reset. A pinned result is kept for comparison.'}
-  else{def.action?.(state,a);answer=null}
+  else{remember();def.action?.(state,a);answer=null}
   draw();announce();
  };
  const move=e=>{
@@ -234,9 +243,11 @@ export function mountLab(host,id,{session=null,setup=null}={}){
   host.setPointerCapture(e.pointerId);move(e);
  };
  const end=e=>{if(!drag||e.pointerId!==drag.id)return;drag=null;if(host.hasPointerCapture(e.pointerId))host.releasePointerCapture(e.pointerId);announce();};
- const keydown=e=>{if(e.key==='Escape'&&playing){stop();announce()}if(e.target.matches('g[data-lab-set]')&&['Enter',' '].includes(e.key)){e.preventDefault();action(e)}};
+ const keydown=e=>{if(e.key==='Escape'&&playing){stop();announce()}if(e.target.matches('g[data-lab-set],g[data-story-inspect]')&&['Enter',' '].includes(e.key)){e.preventDefault();action(e)}};
+ const controlsToggle=()=>{mode=controls.querySelector('.advanced-controls').open?'explore':'guided';scheduleSave()};
+ controls.addEventListener('toggle',controlsToggle,true);
  const events={input:change,change,click:action,keydown,pointerdown:start,pointermove:move,pointerup:end,pointercancel:end,lostpointercapture:end};
  for(const [type,fn] of Object.entries(events))host.addEventListener(type,fn);
- return()=>{disposed=true;stop('');if(saveTimer!==null)win.clearTimeout(saveTimer);save();resizeObserver?.disconnect();visibilityObserver?.disconnect();result.removeEventListener('toggle',resize,true);doc.removeEventListener('lab-play',externalPlay);doc.removeEventListener('visibilitychange',visibility);win.removeEventListener('pagehide',pagehide);if(drag&&host.hasPointerCapture(drag.id))host.releasePointerCapture(drag.id);drag=null;for(const [type,fn] of Object.entries(events))host.removeEventListener(type,fn)};
+ return()=>{disposed=true;stop('');if(saveTimer!==null)win.clearTimeout(saveTimer);save();resizeObserver?.disconnect();visibilityObserver?.disconnect();result.removeEventListener('toggle',resize,true);doc.removeEventListener('lab-play',externalPlay);doc.removeEventListener('visibilitychange',visibility);win.removeEventListener('pagehide',pagehide);if(drag&&host.hasPointerCapture(drag.id))host.releasePointerCapture(drag.id);drag=null;controls.removeEventListener('toggle',controlsToggle,true);for(const [type,fn] of Object.entries(events))host.removeEventListener(type,fn)};
 }
 export {definitions};

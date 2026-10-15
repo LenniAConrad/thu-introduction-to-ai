@@ -45,6 +45,7 @@
   "js/main.js",
   "js/masks.js",
   "js/math.js",
+  "js/model-stories.js",
   "js/nlp-graphics.js",
   "js/nlp-math.js",
   "js/nlp-models.js",

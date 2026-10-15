@@ -48,6 +48,7 @@ const densityPoints=s=>s.dataset==='Shared border'?sharedBorderPoints:curvedPoin
 const restartDensity=s=>{s.model=densityState(densityPoints(s),s.eps,s.minPts,s.order==='Descending');s.point=Math.min(s.point,s.model.points.length);};
 export const fullDbscanDefinition={
  initial(){const s={dataset:'Shared border',eps:1,minPts:4,order:'Ascending',point:4};restartDensity(s);return s;},
+ normalize(s){const m=s.model;if(!Array.isArray(m.queued))m.queued=[...new Set([...m.queue,...m.points.flatMap((_,i)=>m.visited[i]&&m.analysis.core[i]&&m.analysis.component[i]===m.cluster?m.analysis.neighbors[i]:[])])]},
  controls:[select('dataset','Teaching data',['Shared border','Curved groups']),range('eps','Inclusive radius ε',.05,2,.05),range('minPts','MinPts including self',1,8),select('order','Expansion order',['Ascending','Descending']),range('point','Inspect point number',1,52)],
  bounds:(s,id)=>id==='point'?{max:s.model.points.length}:null,
  change(s,key){if(key==='dataset'){s.eps=s.dataset==='Shared border'?1:.9;s.minPts=4;}if(key==='point')s.point=Math.min(s.point,s.model.points.length);else restartDensity(s);},

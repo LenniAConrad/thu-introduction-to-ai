@@ -38,10 +38,10 @@ export function densityAnalysis(points,eps,minPts){
  const candidates=points.map((_,i)=>[...new Set(neighbors[i].filter(j=>core[j]).map(j=>component[j]))].sort((a,b)=>a-b));
  return {neighbors,core,component,count,candidates,types:points.map((_,i)=>core[i]?'Core':candidates[i].length?'Border':'Noise')};
 }
-export function densityState(points,eps,minPts,reverse=false){return {points,eps,minPts,reverse,analysis:densityAnalysis(points,eps,minPts),labels:points.map(()=>null),visited:points.map(()=>false),queue:[],queued:new Set(),current:null,cluster:null,steps:0,done:false,message:'No observations processed.'};}
+export function densityState(points,eps,minPts,reverse=false){return {points,eps,minPts,reverse,analysis:densityAnalysis(points,eps,minPts),labels:points.map(()=>null),visited:points.map(()=>false),queue:[],queued:[],current:null,cluster:null,steps:0,done:false,message:'No observations processed.'};}
 export function densityStep(s){
  if(s.done)return;const {analysis:a}=s,order=Array.from({length:s.points.length},(_,i)=>s.reverse?s.points.length-1-i:i);
- const addNeighbors=i=>{for(const j of (s.reverse?[...a.neighbors[i]].reverse():a.neighbors[i]))if(!s.queued.has(j)){s.queue.push(j);s.queued.add(j);}};
+ const addNeighbors=i=>{for(const j of (s.reverse?[...a.neighbors[i]].reverse():a.neighbors[i]))if(!s.queued.includes(j)){s.queue.push(j);s.queued.push(j);}};
  if(s.queue.length){
   const i=s.queue.shift();s.current=i;
   if(!s.visited[i]){s.visited[i]=true;if(a.core[i])addNeighbors(i);}
@@ -50,7 +50,7 @@ export function densityStep(s){
  }else{
   const i=order.find(i=>!s.visited[i]);if(i===undefined){s.done=true;s.message='All observations processed; density expansion complete.';return;}
   s.current=i;s.visited[i]=true;
-  if(a.core[i]){s.cluster=a.component[i];s.labels[i]=s.cluster;s.queued=new Set([i]);addNeighbors(i);s.message=`Start core component ${s.cluster+1} at point ${i+1}.`;}
+  if(a.core[i]){s.cluster=a.component[i];s.labels[i]=s.cluster;s.queued=[i];addNeighbors(i);s.message=`Start core component ${s.cluster+1} at point ${i+1}.`;}
   else{s.labels[i]=-1;s.message=`Point ${i+1} is non-core; mark provisionally unassigned. A later core expansion can still attach a border point.`;}
  }
  s.steps++;

@@ -28,6 +28,7 @@
   "js/deep-learning-math.js",
   "js/deep-learning-models.js",
   "js/experiment-comparison.js",
+  "js/experiment-layout.js",
   "js/experiment-presentation.js",
   "js/guided-labs.js",
   "js/infrastructure-graphics.js",

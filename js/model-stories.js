@@ -74,11 +74,11 @@ function chainPlot(s,peer=null,interactive=true){
  const values=s.start===null?[preview.start]:[s.start,...s.chain.map(r=>r.x)],old=peer&&peer.start!==null?[peer.start,...peer.chain.map(r=>r.x)]:[];
  // Fix the vertical scale for a whole seeded run; scrubbing must not stretch it.
  const full=value=>{const c=diffusionChain(value.weights,value.condition==='Positive mean'?1:-1,value.sampleSeed,value.predictor);return [c.start,...c.rows.map(r=>r.x)]};
- const extent=Math.max(2,...full(s).map(Math.abs),...(peer?full(peer).map(Math.abs):[]))*1.1,X=i=>50+390*i/12,Y=v=>140-100*v/extent;
+ const extent=Math.max(2,...full(s).map(Math.abs),...(peer?full(peer).map(Math.abs):[]))*1.1,X=i=>80+360*i/12,Y=v=>140-100*v/extent;
  const path=(a,color,extra='')=>`<polyline points="${a.map((v,i)=>`${X(i)},${Y(v)}`).join(' ')}" fill="none" stroke="${color}" stroke-width="2.5" ${extra}/>`;
  const c=s.condition==='Positive mean'?1:-1;
  const dots=values.map((v,i)=>`<g data-morph-key="diffusion-point-${i}" ${i&&interactive?`role="button" tabindex="0" data-story-inspect="t${i}" aria-label="Inspect transition ${i}, state ${fmt(v,4)}"`:''}><circle cx="${X(i)}" cy="${Y(v)}" r="${i===(s.diffusionPoint||values.length-1)?6:4}" fill="${purple}"/></g>`).join('');
- return svg(line(50,Y(c),440,Y(c),teal,'stroke-dasharray="3 4"')+line(50,40,50,240,'#d8c9de')+line(50,240,440,240,'#d8c9de')+path(old,orange,'stroke-dasharray="6 4"')+path(values,purple)+dots+text(40,45,fmt(extent,2),'end')+text(40,245,fmt(-extent,2),'end')+text(50,264,'t = 12')+text(245,264,'6')+text(440,264,'0')+text(245,286,'Reverse generation'),`Generated scalar states. Vertical extent ±${fmt(extent,3)}. Dashed teal line is the current conditional mean, not a known clean target.`,500,300);
+ return svg(line(80,Y(c),440,Y(c),teal,'stroke-dasharray="3 4"')+line(80,40,80,240,'#d8c9de')+line(80,240,440,240,'#d8c9de')+path(old,orange,'stroke-dasharray="6 4"')+path(values,purple)+dots+text(72,45,fmt(extent,2),'end')+text(72,245,fmt(-extent,2),'end')+text(80,264,'t = 12')+text(245,264,'6')+text(440,264,'0')+text(245,286,'Reverse generation'),`Generated scalar states. Vertical extent ±${fmt(extent,3)}. Dashed teal line is the current conditional mean, not a known clean target.`,500,300);
 }
 export function diffusionView(s,interactive=true,peer=null){
  const row=s.chain[Math.min((s.diffusionPoint||s.chain.length)-1,s.chain.length-1)],train=diffusionBatch(s.weights,s.data).loss,valid=diffusionBatch(s.weights,s.validation).loss;

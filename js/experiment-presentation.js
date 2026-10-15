@@ -3,6 +3,15 @@
 export function presentExperiment(doc,html,{guided=false,stepAction=false}={}){
  const template=doc.createElement('template');template.innerHTML=html;
  const root=template.content;
+ // Long titles and legends are explicitly marked by their renderer. Unlike a
+ // character-count cutoff during resize, this keeps the same layout at every step.
+ for(const svg of root.querySelectorAll('svg')){
+  const notes=[...svg.querySelectorAll('text[data-plot-caption]')];if(!notes.length)continue;
+  const frame=doc.createElement('div');frame.className='plot-with-caption';
+  const caption=doc.createElement('div');caption.className='plot-text-key';
+  for(const note of notes){const p=doc.createElement('p');p.textContent=note.textContent;caption.append(p);note.remove()}
+  svg.replaceWith(frame);frame.append(svg,caption);
+ }
  if(guided)return template.innerHTML;
  const extra=doc.createElement('details');
  extra.className='lab-math experiment-details';extra.dataset.morphKey='experiment-details';
@@ -10,7 +19,7 @@ export function presentExperiment(doc,html,{guided=false,stepAction=false}={}){
  let tables=0;
  const hasVisual=!!root.querySelector('svg,.vp-map-pair,.filter-maps,.np-token-figure');
  for(const node of [...root.children]){
-  if(node.tagName==='DETAILS'){
+  if(node.tagName==='DETAILS'||node.matches('[data-classifier-step]')){
    extra.append(node);continue;
   }
   if(node.matches('.table-scroll')){

@@ -29,6 +29,8 @@ The audience includes students meeting AI for the first time. The site should he
 - Pause when the learner leaves a topic, opens an explanation, switches tabs, or moves the experiment offscreen. Retain the current calculation and edited controls.
 - Respect reduced motion. Text and feedback must remain understandable without motion or color.
 - Mount an experiment when its topic is first shown; keep that instance when navigating within the same lecture. Shared setups must open the correct topic and apply validated controls.
+- Keep plot canvases present before their first update. Reserve narrated readouts across their steps at the current container width; allow disclosures to open and close normally. Never clip a result to force a fixed height.
+- Mark long plot notes explicitly and render them as captions. Do not move labels between the picture and the document based on their current character count.
 
 ## Writing
 

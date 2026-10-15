@@ -62,6 +62,6 @@
       "route": "#/lesson/infrastructure/infrastructure-2"
     }
   ],
-  "experienceVersion": 9,
+  "experienceVersion": 10,
   "persistence": "session"
 }

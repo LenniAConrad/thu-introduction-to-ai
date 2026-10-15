@@ -69,7 +69,7 @@ export function trainNetwork(net,data,eta){const g=networkGradient(net,data);ret
 function networkMap(net,data,x){
  let cells='';for(let i=0;i<20;i++)for(let j=0;j<20;j++){const p=networkForward(net,[(i+.5)/20,(j+.5)/20]).p;cells+=`<rect x="${50+i*15}" y="${40+(19-j)*9}" width="15" height="9" fill="${p>=.5?purple:orange}" opacity="${.12+.45*Math.abs(p-.5)*2}"/>`}
  const points=data.map((e,i)=>`<g><circle cx="${50+e.x[0]*300}" cy="${220-e.x[1]*180}" r="6" fill="${e.y?purple:orange}" stroke="#fff" stroke-width="2"/><title>Example ${i+1}: front ${e.x[0]}, left ${e.x[1]}, label ${e.y?'advance':'turn'}</title></g>`).join('');
- return svg(cells+points+`<path d="M${50+x[0]*300-7} ${220-x[1]*180-7}l14 14m0-14-14 14" stroke="#111" stroke-width="3"/><path d="M50 40v180h300" fill="none" stroke="#777"/><text x="50" y="240">0</text><text x="340" y="240">1</text><text x="170" y="264">front distance</text><text x="22" y="46">1</text><text x="22" y="224">0</text><text x="50" y="24">left distance · × current observation</text>`,`Learned action regions and eight labeled examples; current advance score ${fmt(networkForward(net,x).p,3)}`);
+ return svg(cells+points+`<path d="M${50+x[0]*300-7} ${220-x[1]*180-7}l14 14m0-14-14 14" stroke="#111" stroke-width="3"/><path d="M50 40v180h300" fill="none" stroke="#777"/><text x="50" y="240">0</text><text x="340" y="240">1</text><text x="170" y="264">front distance</text><text x="22" y="46">1</text><text x="22" y="224">0</text><text data-plot-caption x="50" y="24">left distance · × current observation</text>`,`Learned action regions and eight labeled examples; current advance score ${fmt(networkForward(net,x).p,3)}`);
 }
 export const neuralDefinition={
  initial:()=>({front:.8,left:.8,eta:.5,example:8,net:initialNetwork(),data:robotExamples(),updates:0,previousLoss:null}),
@@ -115,9 +115,11 @@ export function rewardEpisode(s){
  s.limited=s.state<2;
 }
 function rewardDiagram(s){
- const nodes=[[90,65],[280,65],[90,205],[280,205]];
- const edges=`<path d="M136 65h95m-8-6 8 6-8 6M280 90v70m-6-8 6 8 6-8M242 90 122 168m10-1-10 1 5-10M65 35c-45-45-68 45-19 50m-3-9 3 9-9-3" fill="none" stroke="#aaa" stroke-width="2"/><text x="190" y="15" text-anchor="middle">advance −0.1</text><text x="292" y="132">advance</text><text x="151" y="155">turn +2</text><text x="14" y="19">turn −0.1</text>`;
- return svg(edges+nodes.map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="42" fill="${s.state===i?purple:'#f4eef5'}" stroke="${i===3?'#bc3030':'#a888ae'}"/><text x="${x}" y="${y+5}" fill="${s.state===i?'white':'#222'}" text-anchor="middle">${stateNames[i]}</text>`).join('')+`<text x="272" y="264" text-anchor="middle">collision reward ${fmt(s.collisionReward,2)}</text>`,'Finite robot environment. Entrance advance reaches junction; entrance turn loops. Junction turn reaches goal; junction advance collides.');
+ const nodes=[[125,90],[355,90],[125,250],[355,250]];
+ // End arrows outside each circle. Labels have their own space, including the
+ // self-loop, so enlarging the text on a narrow screen cannot cover an edge.
+ const edges=`<g fill="none" stroke="#8c8297" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M176 90H304m-8-6 8 6-8 6"/><path d="M355 141V199m-6-8 6 8 6-8"/><path d="M312 120 169 219m10-1-10 1 4-10"/><path d="M105 45C43 10 24 121 78 109m-8-6 8 6-9 4"/></g><g class="reward-edge-label" text-anchor="middle"><text x="240" y="44">Advance</text><text x="240" y="65">−0.1</text><text x="453" y="165">Advance</text><text x="453" y="186">${s.collisionReward>0?'+':''}${fmt(s.collisionReward,2)}</text><text x="207" y="151">Turn · +2</text><text x="63" y="26">Turn · −0.1</text></g>`;
+ return svg(edges+nodes.map(([x,y],i)=>`<g><circle cx="${x}" cy="${y}" r="46" fill="${s.state===i?purple:'#fff'}" stroke="${i===3?'#bc3030':i===2?'#187d86':'#a888ae'}" stroke-width="1.5"/><text x="${x}" y="${y+5}" data-label-max-width="86" fill="${s.state===i?'white':'#222'}" text-anchor="middle">${stateNames[i]}</text></g>`).join('')+`<g class="reward-terminal" text-anchor="middle"><text x="125" y="317">Episode ends</text><text x="355" y="317">Episode ends</text></g>`,'Robot environment. Entrance: advance to junction or turn and stay, both reward −0.1. Junction: turn to goal for +2 or advance to collision for '+fmt(s.collisionReward,2)+'. Goal and collision end the episode.','0 0 520 338').replace('class="intro-plot"','class="intro-plot reward-diagram"');
 }
 export const rewardDefinition={
  initial:initialRewardState,

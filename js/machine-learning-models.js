@@ -1,3 +1,4 @@
+import {measuredHistoryPlot} from './experiment-layout.js';
 import {esc,fmt,table} from './render.js';
 import {houseData,lineFit,lineGradient,lineStep,errorMean,curveTraining,curveValidation,referenceCurve,curveFit,multipleData,multipleFit,dot,logisticCalculation,exerciseNeighbors,neighborVote,classifierTraining,classifierValidation,classifierBatch,classifierStep,sigmoid} from './machine-learning-math.js';
 
@@ -127,7 +128,7 @@ export const classifierDefinition={
    `<div class="plot-legend"><span>● Training · □ Validation</span><span>Purple: class 0 · orange: class 1</span><span>Cross: query · line: threshold boundary</span></div><p>Move the query by tapping the field or using its sliders. Query, threshold, and learning-rate controls never update the weights. Changing the label or penalty changes the objective; existing weights are retained until you restart. Restart clears the learned weights and history while retaining these experiment settings. Reset restores everything.</p>`+
    `<details><summary>Inspect data, predictions, and full-batch gradients</summary>${table(['Split / point','x₁','x₂','Target y','p(class 1)'],[...points.map((p,i)=>['Train '+(i+1),...p,fmt(train.rows[i].p,6)]),...classifierValidation.map((p,i)=>['Validation '+(i+1),...p,fmt(val.rows[i].p,6)])])}<p>∂J/∂b = mean(p − y); ∂J/∂wⱼ = mean((p − y)xⱼ) + 2λwⱼ. Current gradient [b,w₁,w₂] = [${train.gradient.map(v=>fmt(v,8)).join(', ')}]. Bias is unpenalized. All derivatives use the same pre-update weights.</p></details>`+
    (s.last?`<div class="info-note" data-classifier-step><strong>Last actual update</strong>${table(['Parameter','Old','Gradient','New'],['b','w₁','w₂'].map((name,i)=>[name,fmt(s.last.old[i],8),fmt(s.last.gradient[i],8),fmt(s.weights[i],8)]))}<p>New = old − ${s.last.eta} × gradient. Objective ${fmt(s.last.before,8)} → ${fmt(s.last.after,8)}.</p></div>`:'')+
-   (s.history.length?classifierHistory(s.history):'')+
+   classifierHistory(s.history)+
    `<p>The untrained zero model gives p = 0.5 everywhere and has no single separating line. With λ = 0 and perfectly separable training data, loss can keep falling as weight magnitudes grow; there is no finite unpenalized optimum. Regularization limits that growth. This tiny validation set is a diagnostic for the fixture, not an estimate of performance on a real application.</p>`;
  },
  action(s,a){
@@ -142,12 +143,7 @@ export const classifierDefinition={
   }
  }
 };
-function classifierHistory(history){
- const max=Math.max(.01,...history.flatMap(h=>[h.train,h.val])),last=history.at(-1).step,first=history[0].step;
- const X=s=>62+(s-first)/Math.max(1,last-first)*340,Y=v=>282-v/max*246;
- const train=path(history.map(h=>[X(h.step),Y(h.train)])),val=path(history.map(h=>[X(h.step),Y(h.val)]));
- return `<figure class="ml-loss-history"><figcaption>Actual training history · BCE, without penalty</figcaption>${svg(`${line(62,282,402,282,'class="plot-grid"')}${text(62,304,first)}${text(402,304,last)}${text(232,330,'Update')}${text(62,19,'BCE: 0 to '+fmt(max,3),'start')}<path d="${train}" fill="none" stroke="${purple}" stroke-width="3"/><path d="${val}" fill="none" stroke="${orange}" stroke-width="3" stroke-dasharray="6 4"/>`,'Training BCE in purple and validation BCE in dashed orange versus actual gradient updates.')}<p>Solid purple: training; dashed orange: validation. Displays the initial entry and up to 200 recent updates for the current data and penalty settings.</p></figure>`;
-}
+function classifierHistory(history){return `<figure class="ml-loss-history"><figcaption>Training history · BCE, without penalty</figcaption>${measuredHistoryPlot(history,{height:340,className:'explore-plot',keys:['train','val'],labels:['Training BCE','Validation BCE']})}<p>Initial entry and up to 200 recent updates for the current data and penalty settings.</p></figure>`}
 
 export const sourceKnnDefinition={
  initial:()=>({x:4.5,y:4,k:3,scale:1,ties:'Ascending'}),

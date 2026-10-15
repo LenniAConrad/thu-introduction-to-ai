@@ -2,6 +2,7 @@ import {enhanceLabs} from './guided-labs.js';
 import {comparisonDetails} from './experiment-comparison.js';
 import {copy,morph,applySetup} from './study-session.js';
 import {readablePlotLabels} from './plot-labels.js';
+import {experimentLayout} from './experiment-layout.js';
 import {presentExperiment,controlOptionLabel,controlLabel} from './experiment-presentation.js';
 import {mdpDefinition as ciMdp,eventsDefinition as ciEvents,ordinalDefinition as ciOrdinal,budgetDefinition as ciBudget,energyDefinition as ciEnergy,occupancyDefinition as ciOccupancy,buildingDefinition as ciBuilding,safetyDefinition as ciSafety} from './infrastructure-models.js';
 import {rarityDefinition as avRarity,importanceDefinition as avImportance,dimensionDefinition as avDimension,challengeDefinition as avChallenge,trafficDefinition as avTraffic,calibrationDefinition as avCalibration,criticalDefinition as avCritical,denseDefinition as avDense} from './autonomous-models.js';
@@ -97,7 +98,14 @@ export function mountLab(host,id,{session=null,setup=null}={}){
  const controls=host.querySelector('[data-controls]'),result=host.querySelector('[data-result]'),explanations=host.querySelector('[data-explanations]'),status=host.querySelector('[data-plot-status]');
  const ui=name=>host.querySelector(`[data-ui="${name}"]`);
  const playStatus=host.querySelector('[data-play-status]');
- const control=c=>`<label data-control-label="${c.id}" data-control-type="${c.type}">${esc(controlLabel(c.label))}${c.type==='range'?` <output data-output="${c.id}">${fmt(state[c.id],5)}</output><input type="range" data-param="${c.id}" aria-label="${esc(controlLabel(c.label))}" min="${c.min}" max="${c.max}" step="${c.step}" value="${state[c.id]}">`:c.type==='select'?`<select data-param="${c.id}" aria-label="${esc(controlLabel(c.label))}">${c.options.map(o=>`<option value="${esc(o)}" ${String(state[c.id])===o?'selected':''}>${esc(controlOptionLabel(o))}</option>`).join('')}</select>`:c.type==='checkbox'?`<input type="checkbox" data-param="${c.id}" ${state[c.id]?'checked':''}>`:`<input type="text" aria-label="${esc(controlLabel(c.label))}" data-param="${c.id}" value="${esc(state[c.id])}" maxlength="1000">`}</label>`;
+ const layout=experimentLayout(host,result,{samples(){
+  const timeline=guide?.timeline,max=timeline?.max(state);
+  if(!guide?.visual||!Number.isInteger(max)||max>20)return [];
+  // These are previews of copied state; they never train or advance the live model.
+  return Array.from({length:max+1},(_,step)=>{const preview=copy(state);timeline.seek(preview,step);return guide.visual(preview)});
+ }});
+ const layoutKey=()=>JSON.stringify(def.controls.filter(c=>c.type==='select'||c.type==='checkbox').map(c=>state[c.id]).concat(guide?.timeline?.max(state)??null));
+ const control=c=>`<label data-control-label="${c.id}" data-control-type="${c.type}"><span class="control-name">${esc(controlLabel(c.label))}</span>${c.type==='range'?` <output data-output="${c.id}">${fmt(state[c.id],5)}</output><input type="range" data-param="${c.id}" aria-label="${esc(controlLabel(c.label))}" min="${c.min}" max="${c.max}" step="${c.step}" value="${state[c.id]}">`:c.type==='select'?`<select data-param="${c.id}" aria-label="${esc(controlLabel(c.label))}">${c.options.map(o=>`<option value="${esc(o)}" ${String(state[c.id])===o?'selected':''}>${esc(controlOptionLabel(o))}</option>`).join('')}</select>`:c.type==='checkbox'?`<input type="checkbox" data-param="${c.id}" ${state[c.id]?'checked':''}>`:`<input type="text" aria-label="${esc(controlLabel(c.label))}" data-param="${c.id}" value="${esc(state[c.id])}" maxlength="1000">`}</label>`;
  function makeControls(){controls.innerHTML=def.controls.filter(c=>primary.includes(c.id)).map(control).join('')+`<details class="advanced-controls" ${mode==='explore'?'open':''}><summary>More controls</summary><div>${def.controls.filter(c=>!primary.includes(c.id)).map(control).join('')}</div></details>`;controls.querySelector('.advanced-controls').hidden=def.controls.every(c=>primary.includes(c.id))}
  function save(){if(!session)return;session.write('lab:'+id,{state,pinned,prediction,answer,mode})}
  function scheduleSave(){if(saveTimer!==null)win.clearTimeout(saveTimer);saveTimer=win.setTimeout(()=>{saveTimer=null;save()},400)}
@@ -135,6 +143,7 @@ export function mountLab(host,id,{session=null,setup=null}={}){
   morph(result,view.innerHTML);morph(explanations,extra);
   readablePlotLabels(result);
   readablePlotLabels(explanations);
+  layout.update(layoutKey());
   for(const c of def.controls){
    const el=controls.querySelector(`[data-param="${c.id}"]`);
    el.closest('label').hidden=def.visible?!def.visible(state,c.id):false;
@@ -182,7 +191,7 @@ export function mountLab(host,id,{session=null,setup=null}={}){
   timer=win.setTimeout(tick,(playback.interval||1250)/Number(ui('speed').value));
  }
  makeControls();draw();
- const resize=()=>{readablePlotLabels(result);readablePlotLabels(explanations)};
+ const resize=()=>{readablePlotLabels(result);readablePlotLabels(explanations);layout.update(layoutKey())};
  const resizeObserver=typeof win.ResizeObserver==='function'?new win.ResizeObserver(resize):null;
  resizeObserver?.observe(host);result.addEventListener('toggle',resize,true);explanations.addEventListener('toggle',resize,true);
  const visibilityObserver=typeof win.IntersectionObserver==='function'?new win.IntersectionObserver(entries=>{if(playing&&!entries[0].isIntersecting)stop('Paused when the experiment left the screen.')}):null;
@@ -284,6 +293,6 @@ export function mountLab(host,id,{session=null,setup=null}={}){
  host.addEventListener('toggle',inspectToggle,true);
  const events={input:change,change,click:action,keydown,pointerdown:start,pointermove:move,pointerup:end,pointercancel:end,lostpointercapture:end};
  for(const [type,fn] of Object.entries(events))host.addEventListener(type,fn);
- return()=>{disposed=true;stop('');if(saveTimer!==null)win.clearTimeout(saveTimer);save();resizeObserver?.disconnect();visibilityObserver?.disconnect();result.removeEventListener('toggle',resize,true);explanations.removeEventListener('toggle',resize,true);doc.removeEventListener('lab-play',externalPlay);doc.removeEventListener('visibilitychange',visibility);win.removeEventListener('pagehide',pagehide);if(drag&&host.hasPointerCapture(drag.id))host.releasePointerCapture(drag.id);drag=null;controls.removeEventListener('toggle',controlsToggle,true);host.removeEventListener('toggle',inspectToggle,true);for(const [type,fn] of Object.entries(events))host.removeEventListener(type,fn)};
+ return()=>{disposed=true;stop('');layout.destroy();if(saveTimer!==null)win.clearTimeout(saveTimer);save();resizeObserver?.disconnect();visibilityObserver?.disconnect();result.removeEventListener('toggle',resize,true);explanations.removeEventListener('toggle',resize,true);doc.removeEventListener('lab-play',externalPlay);doc.removeEventListener('visibilitychange',visibility);win.removeEventListener('pagehide',pagehide);if(drag&&host.hasPointerCapture(drag.id))host.releasePointerCapture(drag.id);drag=null;controls.removeEventListener('toggle',controlsToggle,true);host.removeEventListener('toggle',inspectToggle,true);for(const [type,fn] of Object.entries(events))host.removeEventListener(type,fn)};
 }
 export {definitions};

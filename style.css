@@ -1013,12 +1013,7 @@ button.array-cell:hover{box-shadow:inset 0 0 0 2px #b296bd;z-index:1}
 .share-setup label{font-size:.8rem;font-weight:600}
 .share-setup input{display:block;width:100%;margin-top:8px;font-size:.76rem}
 .share-setup p{font-size:.72rem;margin:8px 0 0;line-height:1.6}
-.reader-navigation{position:sticky;top:82px;z-index:15;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) auto;gap:16px;align-items:center;padding:12px 18px;margin:25px 0 18px;background:rgba(255,255,255,.98);border:1px solid #e0d5e5;border-radius:8px;box-shadow:0 4px 18px #462c5010}
-.reader-navigation label{display:block;min-width:0}
-.reader-navigation .eyebrow{font-size:.55rem;margin-bottom:4px}
-.reader-navigation select{display:block;width:100%;border:0;border-radius:0;padding:3px 16px 3px 0;font-size:.78rem;background:transparent;text-overflow:ellipsis}
-.reading-position{font-size:.7rem;color:#8a7394;white-space:nowrap;font-variant-numeric:tabular-nums}
-.lecture-section,.lecture-section>h2,.inline-experiment{scroll-margin-top:185px}
+.lecture-section,.lecture-section>h2,.inline-experiment{scroll-margin-top:110px}
 .resume-reading{display:flex;justify-content:space-between;align-items:center;gap:20px;max-width:860px;margin:20px auto 0;padding:22px 24px;background:#f7f1fa;border:1px solid #dfd0e5;border-radius:8px;font-size:.9rem}
 .resume-reading>span{color:#80648c;font-size:.8rem}
 @container experiment (max-width:650px){
@@ -1041,14 +1036,13 @@ button.array-cell:hover{box-shadow:inset 0 0 0 2px #b296bd;z-index:1}
  .snapshot .training-stage,.snapshot .convolution-stage{grid-template-columns:1fr}.snapshot .convolution-stage>figure:last-child{grid-column:1}
 }
 @media(max-width:760px){
- .reader-navigation{top:62px;gap:10px;padding:10px 12px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.reading-position{display:none}.reader-navigation .eyebrow{font-size:.48rem}.reader-navigation select{font-size:.69rem;min-height:32px}
- .lecture-section,.lecture-section>h2,.inline-experiment{scroll-margin-top:160px}.resume-reading{display:block;padding:18px}.resume-reading>strong{display:block;margin-top:8px;font-size:.86rem}
+ .lecture-section,.lecture-section>h2,.inline-experiment{scroll-margin-top:90px}.resume-reading{display:block;padding:18px}.resume-reading>strong{display:block;margin-top:8px;font-size:.86rem}
 }
 @media(prefers-reduced-motion:reduce){
  .enhanced-lab *,.enhanced-lab *:before,.enhanced-lab *:after{transition:none!important;animation:none!important;scroll-behavior:auto!important}
 }
 @media print{
- .reader-navigation,.experiment-toolbar,.lab-mode,.share-setup,.direct-editors,.playback-status{display:none!important}.enhanced-lab{container-type:normal}.enhanced-lab details{display:block}.enhanced-lab .lab-controls{display:none}.pinned-comparison,.prediction-card{break-inside:avoid}.snapshot{pointer-events:auto}
+ .experiment-toolbar,.lab-mode,.share-setup,.direct-editors,.playback-status{display:none!important}.enhanced-lab{container-type:normal}.enhanced-lab details{display:block}.enhanced-lab .lab-controls{display:none}.pinned-comparison,.prediction-card{break-inside:avoid}.snapshot{pointer-events:auto}
 }
 .enhanced-lab[data-lab=kmeans] svg circle{transition:cx 420ms var(--motion-ease),cy 420ms var(--motion-ease),fill 280ms ease}
 .enhanced-lab[data-lab=kmeans] svg rect{transition:fill 280ms ease}

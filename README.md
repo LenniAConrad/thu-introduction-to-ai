@@ -6,7 +6,7 @@ A minimal static study reader for Jungong Han’s Introduction to Artificial Int
 
 The 13 lectures contain 329 sections, 506 inline questions and 96 browser experiments. Static diagrams are fully visible; small models perform actual local training and numerical simulations. The site has a professor landing page and lecture selector. There are no accounts, saved notes or course-administration pages.
 
-Guided visual workbenches explain convolution, attention, neural-network training and the Transformer. Playback includes pause, single steps, step back and speed controls. It pauses when an experiment leaves the screen or the tab is hidden, and reduced-motion preferences disable transitions. K-means also compares seeded fits visually. The chapter navigator jumps directly to sections and experiments.
+Guided visual workbenches explain convolution, attention, neural-network training and the Transformer. Playback includes pause, single steps, step back and speed controls. It pauses when an experiment leaves the screen or the tab is hidden, and reduced-motion preferences disable transitions. K-means also compares seeded fits visually. A collapsible chapter outline links to sections; reading resume works without a floating navigation bar.
 
 Attention has dominant-key, uniform and blocked-future presets alongside the full Transformer. Its animation traces signed scores, scaling, masking, softmax and each weighted-value contribution. Convolution can build one output from nine products, then bias and activation, or scan the image. Finished calculations can replay with the same controls.
 

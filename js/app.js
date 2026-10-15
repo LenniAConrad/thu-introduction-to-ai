@@ -1,5 +1,5 @@
 import {studySession} from './study-session.js';
-import {bindReaderNavigation} from './reader-navigation.js';
+import {bindReadingPosition} from './reader-navigation.js';
 import {esc} from './render.js';
 import {landingHTML,selectorHTML} from './landing.js';
 import {readerHTML} from './reading.js';
@@ -36,8 +36,6 @@ export function createApp(root,allLessons){
    root.querySelectorAll('[data-section-link]').forEach(a=>{const active=a.dataset.sectionLink===target.section;a.classList.toggle('active',active);if(active)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current')});
    const lab=[...root.querySelectorAll('[data-lab]')].find(el=>el.dataset.lab===target.lab&&el.closest('[data-section]')?.dataset.section===target.section);
    const heading=lab?.closest('.inline-experiment')||root.querySelector(`#heading-${target.section}`);focus(heading);heading?.scrollIntoView?.({block:'start'});
-   const nav=root.querySelector('[data-reading-section]');if(nav)nav.value=target.section;
-   const index=byId.get(target.id).sections.findIndex(s=>s.id===target.section),label=root.querySelector('[data-reading-position]');if(label)label.textContent=`${index+1} / ${byId.get(target.id).sections.length}`;
    session.write('position:'+target.id,target.section);session.write('last',{id:target.id,section:target.section});
   }else{focus(root.querySelector('.page-content h1'));window.scrollTo?.(0,0)}
  }
@@ -49,7 +47,7 @@ export function createApp(root,allLessons){
   const body=route==='/'?landingHTML(lessons).replace('</header>',resume+'</header>'):page==='lectures'||page==='lessons'?selectorHTML(lessons):target?lessonHTML(byId.get(target.id)):'<h1>Page not found</h1><a class="button" href="#/">Back to course</a>';
   root.innerHTML=`<a class="skip-link" href="#main-content" data-action="skip">Skip to content</a><header class="mobile-header"><a href="#/">Introduction to AI</a><button class="button subtle" data-action="menu" aria-label="Toggle navigation" aria-expanded="false">Menu</button></header><aside class="sidebar"><a class="brand" href="#/"><span class="brand-mark">AI</span><div><strong>Introduction to AI</strong><small>JUNGONG HAN · TSINGHUA</small></div></a><nav aria-label="Course"><a href="#/" ${route==='/'?'class="active" aria-current="page"':''}>Home</a><a href="#/lectures" ${page==='lectures'||page==='lessons'||target?'class="active" aria-current="page"':''}>Lectures</a></nav></aside><main id="main-content" class="main" tabindex="-1"><div class="page-content">${body}</div><footer class="site-footer"><span>Introduction to Artificial Intelligence</span><a href="#/lectures">All lectures</a></footer></main>`;
   root.querySelectorAll('[data-lab]').forEach(el=>cleanup.push(mountLab(el,el.dataset.lab,{session,setup:target?.lab===el.dataset.lab?target.setup:null})));
-  if(target){const l=byId.get(target.id);cleanup.push(bindReaderNavigation(root,l,session));if(!target.section)session.write('last',{id:l.id,section:session.read('position:'+l.id,l.sections[0].id)})}
+  if(target){const l=byId.get(target.id);cleanup.push(bindReadingPosition(root,l,session));if(!target.section)session.write('last',{id:l.id,section:session.read('position:'+l.id,l.sections[0].id)})}
   cleanup.push(bindWorked(root));
  }
  function changed(){

@@ -11,6 +11,7 @@ export function bindReadingPosition(root,lesson,session){
  }
  function update(){
   pending=null;
+  if(root.querySelector('[data-reader-view]')?.dataset.readerView!=='full')return;
   const mobile=root.querySelector('.mobile-header')?.getBoundingClientRect(),desktop=root.querySelector('.sidebar')?.getBoundingClientRect();
   const threshold=(mobile?.height?mobile.bottom:desktop?.height?desktop.bottom:0)+32;
   const measured=sections.filter(s=>s.getBoundingClientRect().height>0);if(!measured.length)return;

@@ -23,6 +23,7 @@
   "js/classification-detection-graphics.js",
   "js/classification-detection-math.js",
   "js/classification-detection-models.js",
+  "js/course-guide.js",
   "js/deep-learning-graphics.js",
   "js/deep-learning-math.js",
   "js/deep-learning-models.js",

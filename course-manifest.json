@@ -15,7 +15,10 @@
   "capabilities": [
     "professor-landing",
     "lecture-selector",
-    "continuous-lecture-reader",
+    "topic-reader",
+    "full-lecture-view",
+    "grouped-topic-map",
+    "sequential-practice",
     "inline-exercises",
     "interactive-calculations",
     "source-issue-warnings",
@@ -59,6 +62,6 @@
       "route": "#/lesson/infrastructure/infrastructure-2"
     }
   ],
-  "experienceVersion": 8,
+  "experienceVersion": 9,
   "persistence": "session"
 }

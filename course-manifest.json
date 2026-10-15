@@ -18,7 +18,12 @@
     "continuous-lecture-reader",
     "inline-exercises",
     "interactive-calculations",
-    "source-issue-warnings"
+    "source-issue-warnings",
+    "guided-experiments",
+    "animated-computation",
+    "pinned-comparisons",
+    "session-resume",
+    "shareable-setups"
   ],
   "conceptLinks": [
     {
@@ -46,6 +51,6 @@
       "route": "#/lesson/infrastructure/infrastructure-2"
     }
   ],
-  "experienceVersion": 3,
-  "persistence": "none"
+  "experienceVersion": 4,
+  "persistence": "session"
 }

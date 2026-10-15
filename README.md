@@ -4,7 +4,11 @@
 
 A minimal static study reader for Jungong Han’s Introduction to Artificial Intelligence course at Tsinghua University. The instructor is **Tenured Professor (长聘教授), Department of Automation; Fellow of IAPR · Fellow of AAIA**.
 
-The13 lectures contain329 sections,506 inline questions and96 browser experiments. Static diagrams are fully visible; small models perform actual local training and numerical simulations. The site has a professor landing page and lecture selector. There are no accounts, saved notes or course-administration pages.
+The 13 lectures contain 329 sections, 506 inline questions and 96 browser experiments. Static diagrams are fully visible; small models perform actual local training and numerical simulations. The site has a professor landing page and lecture selector. There are no accounts, saved notes or course-administration pages.
+
+Guided visual workbenches explain convolution, attention, neural-network training and the Transformer. Playback includes pause, single steps, step back and speed controls. It pauses when an experiment leaves the screen or the tab is hidden, and reduced-motion preferences disable transitions. K-means also compares seeded fits visually. The chapter navigator jumps directly to sections and experiments.
+
+“Pin result” keeps a comparison while you change controls. “Share setup” provides a link to a fresh run with those controls; trained weights and complete edited arrays are not included.
 
 ## Run locally
 
@@ -12,7 +16,7 @@ The13 lectures contain329 sections,506 inline questions and96 browser experiment
 python3 -m http.server 5173
 ```
 
-Open http://localhost:5173/. No runtime dependencies or model API are required. Exercise state stays in memory.
+Open http://localhost:5173/. No runtime dependencies or model API are required. Experiments, predictions, pinned results, quiz answers and the reading position are kept in this browser tab through session storage, with an in-memory fallback. The older guide’s saved records are untouched.
 
 ## GitHub Pages
 

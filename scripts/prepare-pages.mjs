@@ -12,7 +12,7 @@ const references=[...html.matchAll(/(?:src|href)="(\.\/[^"#?]+)(?:[^"#]*)"/g)].m
 for(const ref of references)if(!listed.has(path.posix.normalize(ref)))throw Error('Missing HTML resource: '+ref);
 for(const name of files.filter(f=>f.endsWith('.js'))){const code=await fs.readFile(path.join(root,name),'utf8');for(const m of code.matchAll(/(?:from\s*|import\s*)['"](\.[^'"]+)['"]/g)){const ref=path.posix.normalize(path.posix.join(path.posix.dirname(name),m[1]));if(!listed.has(ref))throw Error('Missing module: '+ref)}}
 const manifest=JSON.parse(await fs.readFile(path.join(root,'course-manifest.json'),'utf8'));
-if(manifest.persistence!=='none'||!manifest.publicUrl.startsWith('https://'))throw Error('Invalid public course metadata.');
+if(manifest.persistence!=='session'||!manifest.publicUrl.startsWith('https://'))throw Error('Invalid public course metadata.');
 if(!listed.has(path.posix.normalize(manifest.content.lessons)))throw Error('Missing lecture data.');
 const lessons=JSON.parse(await fs.readFile(path.join(root,'data/lessons.json'),'utf8'));
 if(lessons.length!==13||lessons.some(l=>l.group==='Coursework'))throw Error('Expected the13 public lectures.');

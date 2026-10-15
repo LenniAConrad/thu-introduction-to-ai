@@ -47,5 +47,17 @@ export function presentExperiment(doc,html,{guided=false,stepAction=false}={}){
 // Labels describe what the student can change, while stored values stay stable
 // for existing setup links and saved experiments.
 export function controlOptionLabel(value){
- return value==='Active learning fixture'?'Active learning example':value;
+ return value.replace(/\bfixture\b/gi,word=>word[0]==='F'?'Example':'example');
+}
+
+export function controlLabel(value){
+ const names={
+  'Declared score table':'Example scores',
+  'Actual generator-training objective':'Generator objective',
+  'Declared model initialization':'Model initialization',
+  'Declared fixed input features':'Input features',
+  'Declared scoring units':'Scoring units',
+  'Declared loss surface':'Loss surface'
+ };
+ return names[value]||controlOptionLabel(value);
 }

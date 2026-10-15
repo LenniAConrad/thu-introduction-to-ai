@@ -17,16 +17,25 @@ export function createApp(root,allLessons){
  const focus=el=>{if(!el)return;el.tabIndex=-1;el.focus({preventScroll:true})};
  function quizHTML(q){
   const answer=answers[q.id];
-  return `<form class="quiz" data-quiz="${esc(q.id)}" aria-labelledby="prompt-${esc(q.id)}"><h3 id="prompt-${esc(q.id)}">${esc(q.prompt)}</h3><div class="choices">${q.choices.map((choice,i)=>`<label class="quiz-choice ${answer&&i===q.answer?'correct':''}"><input type="radio" name="${esc(q.id)}" value="${i}" ${answer?.choice===i?'checked':''} ${answer?'disabled':''}>${esc(choice)}</label>`).join('')}</div>${answer?`<div role="status" tabindex="-1"><strong>${answer.correct?'Correct':'Try a different approach'}</strong><p>${esc(q.why)}</p><button class="button subtle" type="button" data-action="retry" data-id="${esc(q.id)}">Try again</button></div>`:'<button class="button" type="submit">Check answer</button><p class="quiz-status" role="status"></p>'}</form>`;
+  const choices=q.choices.map((choice,i)=>{
+   const chosen=answer?.choice===i,correct=!!answer&&i===q.answer;
+   const state=correct?'correct':chosen?'incorrect':'';
+   const tag=answer&&(chosen||correct)?`<small class="quiz-answer-label">${correct?(chosen?'Your answer · correct':'Correct answer'):'Your answer'}</small>`:'';
+   return `<label class="quiz-choice ${state}"><input type="radio" name="${esc(q.id)}" value="${i}" ${chosen?'checked':''} ${answer?'disabled':''}><span>${esc(choice)}${tag}</span></label>`;
+  }).join('');
+  return `<form class="quiz" data-quiz="${esc(q.id)}" aria-labelledby="prompt-${esc(q.id)}"><h3 id="prompt-${esc(q.id)}">${esc(q.prompt)}</h3><div class="choices" role="radiogroup" aria-labelledby="prompt-${esc(q.id)}">${choices}</div>${answer?`<div class="quiz-feedback" role="status" tabindex="-1"><strong>${answer.correct?'Correct.':'Not quite.'}</strong>${answer.correct?'':`<p class="quiz-correction">Correct answer: ${esc(q.choices[q.answer])}</p>`}<p>${esc(q.why)}</p><button class="button subtle" type="button" data-action="retry" data-id="${esc(q.id)}">Try again</button></div>`:'<button class="button" type="submit">Check answer</button><p class="quiz-status" role="status"></p>'}</form>`;
  }
  function lessonHTML(l){
-  return `<div class="lecture-page"><a class="back-link" href="#/lectures">← Lectures</a><header class="lesson-header"><div><span class="eyebrow">LECTURE ${String(lessons.indexOf(l)+1).padStart(2,'0')} · ${esc(l.group)}</span><h1>${esc(l.title)}</h1><p>${esc(lessonSummary(l))}</p></div></header>${readerHTML(l,null,{quizHTML,workedHTML,labCatalog})}</div>`;
+  const index=lessons.indexOf(l),previous=lessons[index-1],next=lessons[index+1];
+  const link=(lesson,direction)=>`<a class="lecture-${direction}" rel="${direction==='previous'?'prev':'next'}" href="#/lesson/${esc(lesson.id)}/${esc(lesson.sections[0].id)}"><span>${direction==='previous'?'← Previous lecture':'Next lecture →'}</span><strong>${esc(lesson.title)}</strong></a>`;
+  const navigation=`<nav class="lesson-navigation" aria-label="Lecture navigation">${previous?link(previous,'previous'):''}${next?link(next,'next'):'<a href="#/lectures"><span>Return to the course</span><strong>Browse all lectures →</strong></a>'}</nav>`;
+  return `<div class="lecture-page"><a class="back-link" href="#/lectures">← Lectures</a><header class="lesson-header"><div><span class="eyebrow">LECTURE ${String(index+1).padStart(2,'0')} · ${esc(l.group)}</span><h1>${esc(l.title)}</h1><p>${esc(lessonSummary(l))}</p></div></header>${readerHTML(l,null,{quizHTML,workedHTML,labCatalog})}${navigation}</div>`;
  }
  function destination(){
   const [path,query='']=(window.location.hash.slice(1)||'/').split('?');
-  const [page,id,section]=path.split('/').filter(Boolean),params=new URLSearchParams(query);
+  const [page,id,section,...extra]=path.split('/').filter(Boolean),params=new URLSearchParams(query);
   let setup=null;try{const raw=params.get('setup');if(raw&&raw.length<=12000)setup=JSON.parse(raw)}catch{}
-  if(page==='lesson'&&byId.has(id)&&(!section||byId.get(id).sections.some(s=>s.id===section)))return {id,section,lab:params.get('lab'),setup};
+  if(page==='lesson'&&!extra.length&&byId.has(id)&&(!section||byId.get(id).sections.some(s=>s.id===section)))return {id,section,lab:params.get('lab'),setup};
   return null;
  }
  function position(){
@@ -42,10 +51,11 @@ export function createApp(root,allLessons){
  function render(){
   cleanup.forEach(f=>f());cleanup=[];
   route=(window.location.hash.slice(1)||'/').split('?')[0];
-  const page=route.split('/').filter(Boolean)[0],target=destination();
+  const target=destination(),selector=route==='/lectures'||route==='/lessons';
+  root.ownerDocument.title=target?`${byId.get(target.id).title} · Introduction to AI`:selector?'Lectures · Introduction to AI':route==='/'?'Introduction to AI · Tsinghua':'Page not found · Introduction to AI';
   const last=session.read('last'),resume=last&&byId.get(last.id)?.sections.some(s=>s.id===last.section)?`<a class="resume-reading" href="#/lesson/${esc(last.id)}/${esc(last.section)}"><span>Continue reading</span><strong>${esc(byId.get(last.id).title)} →</strong></a>`:'';
-  const body=route==='/'?landingHTML(lessons).replace('</header>',resume+'</header>'):page==='lectures'||page==='lessons'?selectorHTML(lessons):target?lessonHTML(byId.get(target.id)):'<h1>Page not found</h1><a class="button" href="#/">Back to course</a>';
-  root.innerHTML=`<a class="skip-link" href="#main-content" data-action="skip">Skip to content</a><header class="mobile-header"><a href="#/">Introduction to AI</a><button class="button subtle" data-action="menu" aria-label="Toggle navigation" aria-expanded="false">Menu</button></header><aside class="sidebar"><a class="brand" href="#/"><span class="brand-mark">AI</span><div><strong>Introduction to AI</strong><small>JUNGONG HAN · TSINGHUA</small></div></a><nav aria-label="Course"><a href="#/" ${route==='/'?'class="active" aria-current="page"':''}>Home</a><a href="#/lectures" ${page==='lectures'||page==='lessons'||target?'class="active" aria-current="page"':''}>Lectures</a></nav></aside><main id="main-content" class="main" tabindex="-1"><div class="page-content">${body}</div><footer class="site-footer"><span>Introduction to Artificial Intelligence</span><a href="#/lectures">All lectures</a></footer></main>`;
+  const body=route==='/'?landingHTML(lessons).replace('</header>',resume+'</header>'):selector?selectorHTML(lessons):target?lessonHTML(byId.get(target.id)):'<h1>Page not found</h1><a class="button" href="#/">Back to course</a>';
+  root.innerHTML=`<a class="skip-link" href="#main-content" data-action="skip">Skip to content</a><header class="mobile-header"><a href="#/">Introduction to AI</a><button class="button subtle" data-action="menu" aria-label="Toggle navigation" aria-controls="course-navigation" aria-expanded="false">Menu</button></header><aside class="sidebar" id="course-navigation"><a class="brand" href="#/"><span class="brand-mark">AI</span><div><strong>Introduction to AI</strong><small>JUNGONG HAN · TSINGHUA</small></div></a><nav aria-label="Course"><a href="#/" ${route==='/'?'class="active" aria-current="page"':''}>Home</a><a href="#/lectures" ${selector||target?'class="active" aria-current="page"':''}>Lectures</a></nav></aside><main id="main-content" class="main" tabindex="-1"><div class="page-content">${body}</div><footer class="site-footer"><span>Introduction to Artificial Intelligence</span><a href="#/lectures">All lectures</a></footer></main>`;
   cleanup.push(bindLearningPreview(root));
   root.querySelectorAll('[data-lab]').forEach(el=>cleanup.push(mountLab(el,el.dataset.lab,{session,setup:target?.lab===el.dataset.lab?target.setup:null})));
   if(target){const l=byId.get(target.id);cleanup.push(bindReadingPosition(root,l,session));if(!target.section)session.write('last',{id:l.id,section:session.read('position:'+l.id,l.sections[0].id)})}
@@ -71,7 +81,7 @@ export function createApp(root,allLessons){
   const jump=e.target.closest('[data-lecture-jump]');
   if(jump){e.preventDefault();const id=jump.querySelector('select').value;if(byId.has(id))window.location.hash='/lesson/'+id;return}
   const form=e.target.closest('[data-quiz]');if(!form)return;e.preventDefault();
-  const checked=form.querySelector('input:checked');if(!checked){form.querySelector('.quiz-status').textContent='Choose an answer first.';return}
+  const checked=form.querySelector('input:checked');if(!checked){form.querySelector('.quiz-status').textContent='Choose an answer first.';form.querySelector('input')?.focus({preventScroll:true});return}
   const q=questions.get(form.dataset.quiz);if(!q)return;
   const choice=Number(checked.value);answers[q.id]={choice,correct:choice===q.answer};session.write('answers',answers);form.outerHTML=quizHTML(q);focus(root.querySelector(`[data-quiz="${q.id}"] [role=status]`));
  }

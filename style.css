@@ -1063,8 +1063,8 @@ button.array-cell:hover{box-shadow:inset 0 0 0 2px #b296bd;z-index:1}
 .calculation-progress{display:flex;align-items:center;justify-content:space-between;gap:16px;color:#765e80;font-size:.76rem;font-variant-numeric:tabular-nums}
 .calculation-progress progress{width:34%;height:5px;accent-color:#187d86}
 .calculation-story>.stage-explanation{min-height:3.4em}
-.product-strip>span{opacity:.48;transition:opacity 280ms ease,background-color 280ms ease,border-color 280ms ease,box-shadow 280ms ease}
-.product-strip>.is-computed{opacity:1}
+.product-strip>span{transition:background-color 280ms ease,border-color 280ms ease,box-shadow 280ms ease}
+.product-strip>.is-computed{background:#f6eef9;border-color:#cbb4d2}
 .product-strip>.is-current{background:#e1f2ef;border-color:#519f9f;box-shadow:0 2px 8px #187d861a}
 .product-strip>.is-current strong{color:#145e64}
 .product-strip strong{min-height:1.3em;font-variant-numeric:tabular-nums}
@@ -1078,8 +1078,8 @@ button.array-cell:hover{box-shadow:inset 0 0 0 2px #b296bd;z-index:1}
 .is-masked .signed-score-track{background:repeating-linear-gradient(135deg,#f4eff5 0,#f4eff5 4px,#dcd0e1 4px,#dcd0e1 5px)}
 .attention-connection{border-left:3px solid transparent;padding:5px 9px;transition:background-color 280ms ease,border-color 280ms ease}
 .attention-connection.is-current{border-left-color:#187d86;background:#e8f5f2;border-radius:0 5px 5px 0}
-.value-contribution{opacity:.45;transition:opacity 280ms ease}
-.is-computed .value-contribution{opacity:1}
+.value-contribution{color:#6b6373;transition:color 280ms ease}
+.is-computed .value-contribution{color:#483153}
 .contribution-status{display:block;font: .65rem/1.5 var(--sans,system-ui);color:#6b6373;margin-top:3px}
 .is-current .contribution-status{color:#186b70;font-weight:650}
 .attention-connection.is-current .value-contribution strong,.product-strip>.is-current strong{animation:calculation-arrive 360ms ease-out}

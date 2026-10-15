@@ -1,0 +1,83 @@
+{
+  "assets": [
+    {
+      "path": "assets/lecture-1/deep-blue.jpg",
+      "title": "Deep Blue",
+      "creator": "James the photographer (Jim Gardner)",
+      "creatorUrl": "https://www.flickr.com/people/jamesthephotographer/",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Deep_Blue.jpg",
+      "originalSourceUrl": "https://www.flickr.com/photos/22453761@N00/592436598/",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/b/be/Deep_Blue.jpg",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original JPEG bytes retained, displayed at a smaller size.",
+      "width": 400,
+      "height": 601,
+      "bytes": 97206,
+      "sha256": "24166a946d7910ed4c631ed45141e73e6724a776009c910da9a175fe9c880b85",
+      "checked": "2026-10-14",
+      "purpose": "Show a real historical computing system in the Deep Blue discussion."
+    },
+    {
+      "path": "assets/lecture-6/tennessee-warbler.jpg",
+      "title": "Tennessee Warbler (Leiothlypis peregrina)",
+      "creator": "William H. Majoros",
+      "creatorUrl": "https://commons.wikimedia.org/wiki/User:Bmajoros",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Leiothlypis_peregrina_8G7D5136.jpg",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/4/4e/Leiothlypis_peregrina_8G7D5136.jpg",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "changes": "None; Commons current original JPEG bytes retained, displayed at a smaller size.",
+      "width": 1184,
+      "height": 712,
+      "bytes": 564049,
+      "sha256": "b6a0399463860371d59589d52c94e31beee18c2d5b9d4c85678ecc6cd781b0f3",
+      "checked": "2026-10-15",
+      "purpose": "Photographic fine-grained recognition example: compare the two original species, with different acquisition conditions explicitly acknowledged."
+    },
+    {
+      "path": "assets/lecture-6/orange-crowned-warbler.jpg",
+      "title": "Orange-crowned Warbler",
+      "creator": "Becky Matsubara",
+      "creatorUrl": "https://www.flickr.com/people/130819719@N05/",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Orange-crowned_Warbler_(39223970004).jpg",
+      "originalSourceUrl": "https://www.flickr.com/photos/130819719@N05/39223970004/",
+      "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/17/Orange-crowned_Warbler_%2839223970004%29.jpg/1280px-Orange-crowned_Warbler_%2839223970004%29.jpg",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "Commons-provided 1280-pixel scaled JPEG; no crop or content edit.",
+      "width": 1280,
+      "height": 1024,
+      "bytes": 203582,
+      "sha256": "bc676d0421bf603dce283eeb3d0e252782097338f3fa4bc5d0353ff049d1b76c",
+      "checked": "2026-10-15",
+      "purpose": "Photographic fine-grained recognition example: compare the two original species, with different acquisition conditions explicitly acknowledged."
+    },
+    {
+      "path": "assets/lecture-9/bert-vocabulary.js",
+      "title": "BERT base uncased WordPiece vocabulary",
+      "creator": "The BERT Authors / Google Research",
+      "sourceUrl": "https://huggingface.co/google-bert/bert-base-uncased/raw/main/vocab.txt",
+      "license": "Apache-2.0",
+      "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "changes": "Vocabulary entries/order unchanged; original newline list serialized as an ES module. No model weights.",
+      "bytes": 292801,
+      "sha256": "3fa9b37261990422ddfbc024977e3c20126f95b4bbadf3218721891c7fb3815e",
+      "checked": "2026-10-15",
+      "purpose": "Exact local WordPiece tokenization and checkpoint-specific IDs; no pretrained language inference."
+    },
+    {
+      "path": "assets/lecture-9/bert-vocabulary-LICENSE.txt",
+      "title": "Apache 2.0 license for the BERT vocabulary",
+      "creator": "The BERT Authors / Google Research",
+      "sourceUrl": "https://github.com/google-research/bert/blob/master/LICENSE",
+      "license": "Apache-2.0",
+      "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "changes": "None; original license bytes retained.",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "checked": "2026-10-15",
+      "purpose": "Exact local WordPiece tokenization and checkpoint-specific IDs; no pretrained language inference."
+    }
+  ]
+}

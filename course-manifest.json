@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "courseId": "thu-introduction-to-ai",
+  "title": "Introduction to Artificial Intelligence",
+  "institution": "Tsinghua University",
+  "instructor": "Jungong Han",
+  "materialsTerm": "2025–2026 autumn",
+  "contentVersion": "2026-10-14",
+  "entry": "./index.html#/",
+  "publicUrl": "https://lenniaconrad.github.io/thu-introduction-to-ai/",
+  "runtime": "static-html-css-javascript",
+  "content": {
+    "lessons": "./data/lessons.json"
+  },
+  "capabilities": [
+    "professor-landing",
+    "lecture-selector",
+    "continuous-lecture-reader",
+    "inline-exercises",
+    "interactive-calculations",
+    "source-issue-warnings"
+  ],
+  "conceptLinks": [
+    {
+      "conceptId": "linear-models",
+      "route": "#/lesson/supervised/supervised-3"
+    },
+    {
+      "conceptId": "optimization",
+      "route": "#/lesson/neural-networks/neural-networks-2"
+    },
+    {
+      "conceptId": "linear-algebra",
+      "route": "#/lesson/unsupervised/unsupervised-4"
+    },
+    {
+      "conceptId": "image-filtering",
+      "route": "#/lesson/classification-detection/classification-detection-1"
+    },
+    {
+      "conceptId": "attention",
+      "route": "#/lesson/transformers/transformers-4"
+    },
+    {
+      "conceptId": "sequential-decisions",
+      "route": "#/lesson/infrastructure/infrastructure-2"
+    }
+  ],
+  "experienceVersion": 3,
+  "persistence": "none"
+}

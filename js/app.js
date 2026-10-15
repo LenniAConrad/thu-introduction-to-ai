@@ -1,7 +1,7 @@
 import {studySession} from './study-session.js';
 import {bindReadingPosition} from './reader-navigation.js';
 import {esc} from './render.js';
-import {landingHTML,selectorHTML} from './landing.js';
+import {landingHTML,selectorHTML,lessonSummary,bindLearningPreview} from './landing.js';
 import {readerHTML} from './reading.js';
 import {mountLab,labCatalog} from './labs.js';
 import {workedHTML,bindWorked} from './worked.js';
@@ -20,7 +20,7 @@ export function createApp(root,allLessons){
   return `<form class="quiz" data-quiz="${esc(q.id)}" aria-labelledby="prompt-${esc(q.id)}"><h3 id="prompt-${esc(q.id)}">${esc(q.prompt)}</h3><div class="choices">${q.choices.map((choice,i)=>`<label class="quiz-choice ${answer&&i===q.answer?'correct':''}"><input type="radio" name="${esc(q.id)}" value="${i}" ${answer?.choice===i?'checked':''} ${answer?'disabled':''}>${esc(choice)}</label>`).join('')}</div>${answer?`<div role="status" tabindex="-1"><strong>${answer.correct?'Correct':'Try a different approach'}</strong><p>${esc(q.why)}</p><button class="button subtle" type="button" data-action="retry" data-id="${esc(q.id)}">Try again</button></div>`:'<button class="button" type="submit">Check answer</button><p class="quiz-status" role="status"></p>'}</form>`;
  }
  function lessonHTML(l){
-  return `<div class="lecture-page"><a class="back-link" href="#/lectures">← Lectures</a><header class="lesson-header"><div><span class="eyebrow">LECTURE ${String(lessons.indexOf(l)+1).padStart(2,'0')} · ${esc(l.group)}</span><h1>${esc(l.title)}</h1><p>${esc(l.id==='introduction'?'History, approaches to AI, and the problems intelligent systems solve.':l.summary)}</p></div></header>${readerHTML(l,null,{quizHTML,workedHTML,labCatalog})}</div>`;
+  return `<div class="lecture-page"><a class="back-link" href="#/lectures">← Lectures</a><header class="lesson-header"><div><span class="eyebrow">LECTURE ${String(lessons.indexOf(l)+1).padStart(2,'0')} · ${esc(l.group)}</span><h1>${esc(l.title)}</h1><p>${esc(lessonSummary(l))}</p></div></header>${readerHTML(l,null,{quizHTML,workedHTML,labCatalog})}</div>`;
  }
  function destination(){
   const [path,query='']=(window.location.hash.slice(1)||'/').split('?');
@@ -46,6 +46,7 @@ export function createApp(root,allLessons){
   const last=session.read('last'),resume=last&&byId.get(last.id)?.sections.some(s=>s.id===last.section)?`<a class="resume-reading" href="#/lesson/${esc(last.id)}/${esc(last.section)}"><span>Continue reading</span><strong>${esc(byId.get(last.id).title)} →</strong></a>`:'';
   const body=route==='/'?landingHTML(lessons).replace('</header>',resume+'</header>'):page==='lectures'||page==='lessons'?selectorHTML(lessons):target?lessonHTML(byId.get(target.id)):'<h1>Page not found</h1><a class="button" href="#/">Back to course</a>';
   root.innerHTML=`<a class="skip-link" href="#main-content" data-action="skip">Skip to content</a><header class="mobile-header"><a href="#/">Introduction to AI</a><button class="button subtle" data-action="menu" aria-label="Toggle navigation" aria-expanded="false">Menu</button></header><aside class="sidebar"><a class="brand" href="#/"><span class="brand-mark">AI</span><div><strong>Introduction to AI</strong><small>JUNGONG HAN · TSINGHUA</small></div></a><nav aria-label="Course"><a href="#/" ${route==='/'?'class="active" aria-current="page"':''}>Home</a><a href="#/lectures" ${page==='lectures'||page==='lessons'||target?'class="active" aria-current="page"':''}>Lectures</a></nav></aside><main id="main-content" class="main" tabindex="-1"><div class="page-content">${body}</div><footer class="site-footer"><span>Introduction to Artificial Intelligence</span><a href="#/lectures">All lectures</a></footer></main>`;
+  cleanup.push(bindLearningPreview(root));
   root.querySelectorAll('[data-lab]').forEach(el=>cleanup.push(mountLab(el,el.dataset.lab,{session,setup:target?.lab===el.dataset.lab?target.setup:null})));
   if(target){const l=byId.get(target.id);cleanup.push(bindReadingPosition(root,l,session));if(!target.section)session.write('last',{id:l.id,section:session.read('position:'+l.id,l.sections[0].id)})}
   cleanup.push(bindWorked(root));

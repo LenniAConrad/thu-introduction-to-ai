@@ -2,6 +2,7 @@ import {enhanceLabs} from './guided-labs.js';
 import {comparisonDetails} from './experiment-comparison.js';
 import {copy,morph,applySetup} from './study-session.js';
 import {readablePlotLabels} from './plot-labels.js';
+import {presentExperiment,controlOptionLabel} from './experiment-presentation.js';
 import {mdpDefinition as ciMdp,eventsDefinition as ciEvents,ordinalDefinition as ciOrdinal,budgetDefinition as ciBudget,energyDefinition as ciEnergy,occupancyDefinition as ciOccupancy,buildingDefinition as ciBuilding,safetyDefinition as ciSafety} from './infrastructure-models.js';
 import {rarityDefinition as avRarity,importanceDefinition as avImportance,dimensionDefinition as avDimension,challengeDefinition as avChallenge,trafficDefinition as avTraffic,calibrationDefinition as avCalibration,criticalDefinition as avCritical,denseDefinition as avDense} from './autonomous-models.js';
 import {pretrainingDefinition as alPretrain,sftDefinition as alSft,loraDefinition as alLora,evaluationDefinition as alEvaluation,rewardDefinition as alReward,rerankingDefinition as alRerank,policyDefinition as alPolicy,ppoDefinition as alPpo} from './alignment-models.js';
@@ -86,21 +87,21 @@ export function mountLab(host,id,{session=null,setup=null}={}){
  const win=host.ownerDocument.defaultView,doc=host.ownerDocument,guide=def.guide;
  const saved=session?.read('lab:'+id);
  let state=def.initial(),pinned=null,drag=null,timer=null,saveTimer=null,disposed=false,steps=[],playing=false,playCount=0;
- let prediction=null,answer=null,mode='guided',seeking=false;
+ let prediction=null,answer=null,mode='guided',seeking=false,editing=null;
  if(saved){try{def.normalize?.(saved.state);if(saved.pinned)def.normalize?.(saved.pinned);def.render(saved.state);if(saved.pinned)def.render(saved.pinned);state=saved.state;pinned=saved.pinned||null;prediction=saved.prediction||null;answer=saved.answer||null;mode=saved.mode==='explore'?'explore':'guided'}catch{}}
  if(setup){state=applySetup(def,setup);pinned=null;prediction=answer=null}
  const primary=guide?.primary||def.controls.slice(0,3).map(c=>c.id);
  host.classList.add('enhanced-lab');
  const heading=host.closest('.inline-experiment')?'':`<div class="lab-heading"><h4>${esc(guide?.label||labCatalog.find(l=>l[0]===id)?.[1]||'Explore the model')}</h4></div><p class="lab-goal">${esc(labGoals[id])}</p>`;
- host.innerHTML=`${heading}<div class="experiment-toolbar"><div class="playback-controls"><button type="button" class="button" data-ui="play" hidden>Play</button><button type="button" class="button subtle small" data-ui="back" disabled>Back</button><button type="button" class="button subtle small" data-ui="next" hidden>Next</button><label class="playback-speed" hidden>Speed <select data-ui="speed" aria-label="Playback speed"><option value="1">1×</option><option value="0.5">0.5×</option><option value="2">2×</option></select></label></div><div class="experiment-tools"><button type="button" class="button subtle small" data-ui="pin">Pin result</button><button type="button" class="button subtle small" data-ui="share">Share setup</button>${button('reset','Reset')}</div></div>${guide?.timeline?'<label class="calculation-timeline" hidden><span data-timeline-label>Calculation step</span><input type="range" data-ui="timeline" aria-label="Calculation step" min="0" value="0"></label>':''}<p class="playback-status" role="status" data-play-status></p><div class="share-setup" hidden><label>Link to a fresh run with these controls<input type="text" readonly data-share-link></label><p>Trained weights, edited arrays, pinned results and predictions stay in this tab.</p></div><div class="native-lab"><div class="lab-controls" data-controls></div><div class="lab-result" data-result></div></div><div data-prediction></div><div data-comparison></div><p class="sr-only" data-plot-status role="status" aria-live="polite"></p>`;
- const controls=host.querySelector('[data-controls]'),result=host.querySelector('[data-result]'),status=host.querySelector('[data-plot-status]');
+ host.innerHTML=`${heading}<div class="native-lab"><div class="lab-controls" data-controls></div><div class="lab-result" data-result></div></div><div class="experiment-transport">${guide?.timeline?'<label class="calculation-timeline" hidden><span data-timeline-label>Calculation step</span><input type="range" data-ui="timeline" aria-label="Calculation step" min="0" value="0"></label>':''}<div class="experiment-toolbar"><div class="playback-controls"><button type="button" class="button" data-ui="play" hidden>Play</button><button type="button" class="button subtle small" data-ui="previous" aria-label="Previous step" hidden>Previous</button><button type="button" class="button subtle small" data-ui="next" aria-label="Next step" hidden>Next</button><label class="playback-speed" hidden><span class="sr-only">Speed</span><select data-ui="speed" aria-label="Playback speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label></div><details class="experiment-options"><summary>Options</summary><div class="experiment-tools"><button type="button" class="button subtle small" data-ui="back" disabled>Undo change</button><button type="button" class="button subtle small" data-ui="pin">Pin result</button><button type="button" class="button subtle small" data-ui="share">Share setup</button>${button('reset','Reset experiment')}</div></details></div><p class="playback-status" role="status" data-play-status></p></div><div class="share-setup" hidden><label>Link to a fresh run with these controls<input type="text" readonly data-share-link></label><p>Trained weights and edited arrays stay in this tab.</p><button type="button" class="button subtle small" data-ui="close-share">Close link</button></div><div class="lab-result lab-explanations" data-explanations></div><div data-prediction></div><div data-comparison></div><p class="sr-only" data-plot-status role="status" aria-live="polite"></p>`;
+ const controls=host.querySelector('[data-controls]'),result=host.querySelector('[data-result]'),explanations=host.querySelector('[data-explanations]'),status=host.querySelector('[data-plot-status]');
  const ui=name=>host.querySelector(`[data-ui="${name}"]`);
  const playStatus=host.querySelector('[data-play-status]');
- const control=c=>`<label data-control-label="${c.id}">${esc(c.label)}${c.type==='range'?` <output data-output="${c.id}">${fmt(state[c.id],5)}</output><input type="range" data-param="${c.id}" aria-label="${esc(c.label)}" min="${c.min}" max="${c.max}" step="${c.step}" value="${state[c.id]}">`:c.type==='select'?`<select data-param="${c.id}" aria-label="${esc(c.label)}">${c.options.map(o=>`<option ${String(state[c.id])===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`:c.type==='checkbox'?`<input type="checkbox" data-param="${c.id}" ${state[c.id]?'checked':''}>`:`<input type="text" aria-label="${esc(c.label)}" data-param="${c.id}" value="${esc(state[c.id])}" maxlength="1000">`}</label>`;
+ const control=c=>`<label data-control-label="${c.id}" data-control-type="${c.type}">${esc(c.label)}${c.type==='range'?` <output data-output="${c.id}">${fmt(state[c.id],5)}</output><input type="range" data-param="${c.id}" aria-label="${esc(c.label)}" min="${c.min}" max="${c.max}" step="${c.step}" value="${state[c.id]}">`:c.type==='select'?`<select data-param="${c.id}" aria-label="${esc(c.label)}">${c.options.map(o=>`<option value="${esc(o)}" ${String(state[c.id])===o?'selected':''}>${esc(controlOptionLabel(o))}</option>`).join('')}</select>`:c.type==='checkbox'?`<input type="checkbox" data-param="${c.id}" ${state[c.id]?'checked':''}>`:`<input type="text" aria-label="${esc(c.label)}" data-param="${c.id}" value="${esc(state[c.id])}" maxlength="1000">`}</label>`;
  function makeControls(){controls.innerHTML=def.controls.filter(c=>primary.includes(c.id)).map(control).join('')+`<details class="advanced-controls" ${mode==='explore'?'open':''}><summary>More controls</summary><div>${def.controls.filter(c=>!primary.includes(c.id)).map(control).join('')}</div></details>`;controls.querySelector('.advanced-controls').hidden=def.controls.every(c=>primary.includes(c.id))}
  function save(){if(!session)return;session.write('lab:'+id,{state,pinned,prediction,answer,mode})}
  function scheduleSave(){if(saveTimer!==null)win.clearTimeout(saveTimer);saveTimer=win.setTimeout(()=>{saveTimer=null;save()},400)}
- function remember(){steps.push(copy(state));if(steps.length>40)steps.shift();ui('back').disabled=false}
+ function remember(kind='change'){steps.push({state:copy(state),kind});if(steps.length>40)steps.shift();ui('back').disabled=false}
  function announce(){status.textContent=def.describe?.(state)||guide?.label||'Experiment updated.'}
  function staticResult(value,peer){
   const template=doc.createElement('template');template.innerHTML=guide?.snapshot?guide.snapshot(value,peer):def.render(value);
@@ -117,7 +118,8 @@ export function mountLab(host,id,{session=null,setup=null}={}){
   const box=host.querySelector('[data-comparison]');
   if(!pinned){box.innerHTML='';return}
   const params=value=>def.controls.filter(c=>primary.includes(c.id)).map(c=>`${c.label}: ${value[c.id]}`).join(' · ');
-  morph(box,`<section class="pinned-comparison"><header><div><span class="eyebrow">COMPARE RESULTS</span><h4>What changed?</h4></div><button type="button" class="button subtle small" data-ui="unpin">Remove pin</button></header>${guide?.compare?.(pinned,state)||''}${comparisonDetails(def,pinned,state)}<div class="comparison-panels"><figure><figcaption>Pinned result</figcaption><p class="comparison-settings">${esc(params(pinned))}</p><div class="snapshot">${staticResult(pinned,state)}</div></figure><figure><figcaption>Current result</figcaption><p class="comparison-settings">${esc(params(state))}</p><div class="snapshot">${staticResult(state,pinned)}</div></figure></div></section>`);
+  const visual=guide?.compare?.(pinned,state)||'';
+  morph(box,`<section class="pinned-comparison"><header><h4>What changed?</h4><button type="button" class="button subtle small" data-ui="unpin">Remove pin</button></header>${visual}<details data-morph-key="comparison-numbers" class="comparison-records"><summary>Numerical differences</summary>${comparisonDetails(def,pinned,state)}</details>${visual?'<details data-morph-key="comparison-snapshots" class="comparison-records"><summary>View both results</summary>':''}<div class="comparison-panels"><figure><figcaption>Pinned result</figcaption><p class="comparison-settings">${esc(params(pinned))}</p><div class="snapshot">${staticResult(pinned,state)}</div></figure><figure><figcaption>Current result</figcaption><p class="comparison-settings">${esc(params(state))}</p><div class="snapshot">${staticResult(state,pinned)}</div></figure></div>${visual?'</details>':''}</section>`);
  }
  function predictionHTML(){
   const p=guide?.prediction,box=host.querySelector('[data-prediction]');if(!p)return;
@@ -125,9 +127,14 @@ export function mountLab(host,id,{session=null,setup=null}={}){
  }
  let playback=guide?.play;
  function draw(){
-  morph(result,def.render(state));
+  const html=def.render(state);
+  if(!playback&&html.includes('data-lab-action="step"'))playback={label:'Play steps',tick(s){const before=JSON.stringify(s);def.action?.(s,'step');return before!==JSON.stringify(s)}};
+  const view=doc.createElement('template');view.innerHTML=presentExperiment(doc,html,{guided:!!guide?.visual,stepAction:!!playback});
+  const details=[...view.content.querySelectorAll('details.lab-math,details.calculation-products,details.cell-editors,details.architecture-overview,details.weight-inspection,details.point-calculation,details[data-morph-key="variance-sweep"]')];
+  const extra=details.map(el=>{el.remove();return el.outerHTML}).join('');
+  morph(result,view.innerHTML);morph(explanations,extra);
   readablePlotLabels(result);
-  if(!playback&&result.querySelector('[data-lab-action="step"]'))playback={label:'Play steps',tick(s){const before=JSON.stringify(s);def.action?.(s,'step');return before!==JSON.stringify(s)}};
+  readablePlotLabels(explanations);
   for(const c of def.controls){
    const el=controls.querySelector(`[data-param="${c.id}"]`);
    el.closest('label').hidden=def.visible?!def.visible(state,c.id):false;
@@ -135,63 +142,66 @@ export function mountLab(host,id,{session=null,setup=null}={}){
    if(c.type==='checkbox')el.checked=state[c.id];else el.value=state[c.id];
    const out=controls.querySelector(`[data-output="${c.id}"]`);if(out)out.textContent=fmt(state[c.id],5);
   }
-  ui('play').hidden=ui('next').hidden=host.querySelector('.playback-speed').hidden=!playback;
+  const advanced=controls.querySelector('.advanced-controls');advanced.hidden=![...advanced.querySelectorAll('[data-control-label]')].some(el=>!el.hidden);
+  ui('play').hidden=ui('next').hidden=ui('previous').hidden=host.querySelector('.playback-speed').hidden=!playback;
   ui('next').disabled=!!playback?.finished?.(state);
   ui('play').textContent=playing?'Pause':playback?.finished?.(state)?'Replay':'Play';ui('play').setAttribute('aria-label',playing?'Pause animation':playback?.finished?.(state)?'Replay calculation':playback?.label||'Play');
   ui('play').setAttribute('aria-pressed',String(playing));ui('back').disabled=!steps.length;
   const timeline=guide?.timeline;
+  ui('previous').disabled=timeline?timeline.get(state)<=0:steps.at(-1)?.kind!=='step';
   if(timeline)host.querySelector('.calculation-timeline').hidden=false;
   if(timeline){const slider=ui('timeline');slider.max=timeline.max(state);slider.step=timeline.step||1;slider.value=timeline.get(state);slider.setAttribute('aria-valuetext',timeline.label(state));host.querySelector('[data-timeline-label]').textContent=timeline.label(state)}
-  host.dataset.mode=mode;host.dataset.playing=String(playing);
+  host.dataset.mode=mode;host.dataset.playing=String(playing);host.dataset.animated=String(!!playback);
   compare();predictionHTML();scheduleSave();
  }
  const reduced=win.matchMedia?.('(prefers-reduced-motion: reduce)');
  function stop(message='Paused. Use Next to inspect one step.'){
   playing=false;if(timer!==null)win.clearTimeout(timer);timer=null;
   ui('play').textContent=playback?.finished?.(state)?'Replay':'Play';ui('play').setAttribute('aria-label',playback?.finished?.(state)?'Replay calculation':playback?.label||'Play');ui('play').setAttribute('aria-pressed','false');host.dataset.playing='false';
-  if(message)playStatus.textContent=message;
+  playStatus.textContent=message;
  }
  function advance(){
   if(!playback)return false;
-  remember();if(!playback.tick(state)){steps.pop();ui('back').disabled=!steps.length;stop(playback.restart?'This calculation is complete. Replay starts it again with your current settings.':'This sequence is complete. Use Back or Reset to replay it.');return false}
-  draw();if(playback.finished?.(state)){stop('This calculation is complete. Replay starts it again with your current settings.');return false}return true;
+  remember('step');if(!playback.tick(state)){steps.pop();ui('back').disabled=!steps.length;stop(playback.restart?'Complete. Replay uses the same settings.':'Complete. Use Previous or reset the experiment.');return false}
+  draw();if(playback.finished?.(state)){stop('Complete. Replay uses the same settings.');return false}return true;
  }
  function tick(){
   timer=null;if(disposed||!playing)return;
   if(doc.hidden){stop('Paused while the tab is hidden.');return}
   if(!advance())return;
   playCount++;if(playCount>=200){stop('Completed 200 steps. Play again to continue.');announce();return}
-  timer=win.setTimeout(tick,(id==='dl-training'?170:950)/Number(ui('speed').value));
+  timer=win.setTimeout(tick,(playback.interval||1250)/Number(ui('speed').value));
  }
  function togglePlay(){
   if(playing){stop();announce();return}
+  editing=null;seeking=false;
   if(playback?.finished?.(state)&&playback.restart){remember();playback.restart(state);draw()}
   host.dispatchEvent(new win.CustomEvent('lab-play',{bubbles:true,detail:host}));
   playing=true;playCount=0;ui('play').textContent='Pause';ui('play').setAttribute('aria-label','Pause animation');ui('play').setAttribute('aria-pressed','true');host.dataset.playing='true';
   playStatus.textContent=reduced?.matches?'Playing discrete steps; motion effects are disabled.':'Playing. Pause or press Escape to inspect a step.';
-  timer=win.setTimeout(tick,350);
+  timer=win.setTimeout(tick,(playback.interval||1250)/Number(ui('speed').value));
  }
  makeControls();draw();
- const resize=()=>readablePlotLabels(result);
+ const resize=()=>{readablePlotLabels(result);readablePlotLabels(explanations)};
  const resizeObserver=typeof win.ResizeObserver==='function'?new win.ResizeObserver(resize):null;
- resizeObserver?.observe(host);result.addEventListener('toggle',resize,true);
+ resizeObserver?.observe(host);result.addEventListener('toggle',resize,true);explanations.addEventListener('toggle',resize,true);
  const visibilityObserver=typeof win.IntersectionObserver==='function'?new win.IntersectionObserver(entries=>{if(playing&&!entries[0].isIntersecting)stop('Paused when the experiment left the screen.')}):null;
- visibilityObserver?.observe(host);
+ visibilityObserver?.observe(result);
  const externalPlay=e=>{if(e.detail!==host&&playing)stop('Paused while another experiment plays.')};
  const visibility=()=>{if(doc.hidden&&playing)stop('Paused while the tab is hidden.')};
  const pagehide=()=>{stop('');save()};
  doc.addEventListener('lab-play',externalPlay);doc.addEventListener('visibilitychange',visibility);win.addEventListener('pagehide',pagehide);
- function setParam(key,value){
+ function setParam(key,value,rememberChange=true){
   if(key==='viewStep'){remember();state.viewStep=Math.max(0,Math.min(4,Number(value)));def.change?.(state,key);draw();return}
   const c=def.controls.find(c=>c.id===key);if(!c)return;
   if(c.type==='range'){
    value=Number(value);if(!Number.isFinite(value))return;
    const bounds=def.bounds?.(state,key);value=Math.max(bounds?.min??c.min,Math.min(bounds?.max??c.max,value));
   }else if(c.type==='select'&&!c.options.includes(value))return;
-  remember();state[key]=value;def.change?.(state,key);answer=null;draw();
+  if(rememberChange)remember();state[key]=value;def.change?.(state,key);answer=null;draw();
  }
  const change=e=>{
-  if(e.target.dataset.ui==='speed')return;
+  if(e.target.dataset.ui==='speed'){if(playing){win.clearTimeout(timer);timer=win.setTimeout(tick,(playback.interval||1250)/Number(ui('speed').value))}return}
   if(e.target.dataset.ui==='timeline'){
    const n=Number(e.target.value);if(!guide?.timeline||!Number.isFinite(n))return;
    stop('');if(!seeking){remember();seeking=true}
@@ -202,31 +212,40 @@ export function mountLab(host,id,{session=null,setup=null}={}){
   // Native range input emits both input and change; calculate only the first.
   const value=el.type==='checkbox'?el.checked:el.type==='range'||el.type==='number'?Number(el.value):el.value;
   if(el.type==='number'&&(el.value===''||!el.validity.valid))return;
-  if(state[key]===value){if(e.type==='change')announce();return}
-  stop('');setParam(key,value);if(e.type==='change')announce();
+  if(state[key]===value){if(e.type==='change'){editing=null;announce()}return}
+  stop('');setParam(key,value,editing!==key);editing=key;if(e.type==='change'){editing=null;announce()}
  };
  const action=e=>{
   const el=e.target.closest('[data-lab-action],[data-ui],[data-lab-set],[data-predict],[data-story-inspect]');if(!el||!host.contains(el))return;
   const name=el.dataset.ui;
   if(name==='speed'||name==='timeline')return;
-  if(el.dataset.storyInspect!==undefined){stop('');guide?.inspect?.(state,el.dataset.storyInspect);draw();announce();return}
+  editing=null;seeking=false;
+  if(el.dataset.storyInspect!==undefined){stop('');guide?.inspect?.(state,el.dataset.storyInspect);draw();const detail=host.querySelector('.point-calculation');if(detail)detail.open=true;announce();return}
   if(name==='play'){togglePlay();return}
   if(name==='next'){stop('One step.');advance();announce();return}
-  if(name==='back'){stop('Previous state restored.');if(steps.length){state=steps.pop();draw();announce()}return}
-  if(name==='pin'){pinned=copy(state);draw();playStatus.textContent='Result pinned below. Change a setting to compare.';return}
-  if(name==='unpin'){pinned=null;draw();return}
+  if(name==='previous'){
+   stop('Previous step.');const timeline=guide?.timeline;
+   if(timeline&&timeline.get(state)>0){remember('seek');guide.timeline.seek(state,Math.max(0,timeline.get(state)-(timeline.previousStep||timeline.step||1)));draw()}
+   else if(steps.at(-1)?.kind==='step'){state=steps.pop().state;draw()}
+   announce();return;
+  }
+  if(name==='back'){stop('Last change undone.');if(steps.length){state=steps.pop().state;draw();announce()}return}
+  if(name==='pin'){stop('');pinned=copy(state);draw();playStatus.textContent='Result pinned below. Change a setting to compare.';host.querySelector('.experiment-options').open=false;host.querySelector('.experiment-options>summary').focus({preventScroll:true});return}
+  if(name==='unpin'){pinned=null;draw();host.querySelector('.experiment-options>summary').focus({preventScroll:true});return}
   if(name==='share'){
+   stop('');host.querySelector('.experiment-options').open=false;
    const section=host.closest('[data-section]'),lesson=host.closest('[data-reader-lesson]');
    const url=new URL(win.location.href),params=new URLSearchParams({lab:id,setup:JSON.stringify(Object.fromEntries(def.controls.map(c=>[c.id,state[c.id]])))});
    url.hash=lesson&&section?`/lesson/${lesson.dataset.readerLesson}/${section.dataset.section}?${params}`:`${url.hash.slice(1).split('?')[0]}?${params}`;
    const box=host.querySelector('.share-setup');box.hidden=false;const input=box.querySelector('input');input.value=url.href;input.focus();input.select();return;
   }
+  if(name==='close-share'){host.querySelector('.share-setup').hidden=true;host.querySelector('.experiment-options>summary').focus();return}
   if(el.dataset.predict!==undefined){prediction=el.dataset.predict;answer=null;predictionHTML();scheduleSave();return}
   if(name==='test-prediction'){if(prediction===null)return;stop('Prediction checked.');remember();const outcome=guide.prediction.run(state);answer={...outcome,correct:outcome.answer===prediction};draw();announce();return}
-  if(el.dataset.labSet){stop('');setParam(el.dataset.labSet,el.dataset.value);announce();return}
+  if(el.dataset.labSet){stop('');setParam(el.dataset.labSet,el.dataset.value);if(['pixel','weight'].includes(el.dataset.labSet)){const editor=host.querySelector('.cell-editors');if(editor)editor.open=true}announce();return}
   const a=el.dataset.labAction;if(!a)return;
   stop('');
-  if(a==='reset'){state=def.initial();prediction=answer=null;steps=[];makeControls();playStatus.textContent='Experiment reset. A pinned result is kept for comparison.'}
+  if(a==='reset'){state=def.initial();prediction=answer=null;steps=[];makeControls();playStatus.textContent=pinned?'Experiment reset. Pinned result kept for comparison.':'Experiment reset.'}
   else{remember();def.action?.(state,a);answer=null}
   draw();announce();
  };
@@ -246,8 +265,14 @@ export function mountLab(host,id,{session=null,setup=null}={}){
  const keydown=e=>{if(e.key==='Escape'&&playing){stop();announce()}if(e.target.matches('g[data-lab-set],g[data-story-inspect]')&&['Enter',' '].includes(e.key)){e.preventDefault();action(e)}};
  const controlsToggle=()=>{mode=controls.querySelector('.advanced-controls').open?'explore':'guided';scheduleSave()};
  controls.addEventListener('toggle',controlsToggle,true);
+ const inspectToggle=e=>{
+  if(!playing||!e.target.open)return;
+  for(let p=e.target.parentElement;p&&p!==host;p=p.parentElement)if(p.tagName==='DETAILS'&&!p.open)return;
+  stop('Paused for inspection.');
+ };
+ host.addEventListener('toggle',inspectToggle,true);
  const events={input:change,change,click:action,keydown,pointerdown:start,pointermove:move,pointerup:end,pointercancel:end,lostpointercapture:end};
  for(const [type,fn] of Object.entries(events))host.addEventListener(type,fn);
- return()=>{disposed=true;stop('');if(saveTimer!==null)win.clearTimeout(saveTimer);save();resizeObserver?.disconnect();visibilityObserver?.disconnect();result.removeEventListener('toggle',resize,true);doc.removeEventListener('lab-play',externalPlay);doc.removeEventListener('visibilitychange',visibility);win.removeEventListener('pagehide',pagehide);if(drag&&host.hasPointerCapture(drag.id))host.releasePointerCapture(drag.id);drag=null;controls.removeEventListener('toggle',controlsToggle,true);for(const [type,fn] of Object.entries(events))host.removeEventListener(type,fn)};
+ return()=>{disposed=true;stop('');if(saveTimer!==null)win.clearTimeout(saveTimer);save();resizeObserver?.disconnect();visibilityObserver?.disconnect();result.removeEventListener('toggle',resize,true);explanations.removeEventListener('toggle',resize,true);doc.removeEventListener('lab-play',externalPlay);doc.removeEventListener('visibilitychange',visibility);win.removeEventListener('pagehide',pagehide);if(drag&&host.hasPointerCapture(drag.id))host.releasePointerCapture(drag.id);drag=null;controls.removeEventListener('toggle',controlsToggle,true);host.removeEventListener('toggle',inspectToggle,true);for(const [type,fn] of Object.entries(events))host.removeEventListener(type,fn)};
 }
 export {definitions};

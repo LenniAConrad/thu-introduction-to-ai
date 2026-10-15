@@ -2,15 +2,15 @@
 
 [Read the course](https://lenniaconrad.github.io/thu-introduction-to-ai/)
 
-A minimal static study reader for Jungong Han’s Introduction to Artificial Intelligence course at Tsinghua University. The instructor is **Tenured Professor (长聘教授), Department of Automation; Fellow of IAPR · Fellow of AAIA**.
+An interactive study companion for [Jungong Han’s](https://www.au.tsinghua.edu.cn/en/info/1092/3503.htm) Introduction to Artificial Intelligence course at Tsinghua University. The instructor is **Tenured Professor (长聘教授), Department of Automation; Fellow of IAPR · Fellow of AAIA**.
 
-The 13 lectures contain 329 sections, 506 inline questions and 96 browser experiments. Static diagrams are fully visible; small models perform actual local training and numerical simulations. The site has a professor landing page and lecture selector. There are no accounts, saved notes or course-administration pages.
+The 13 lectures contain 329 sections, 506 inline questions and 96 browser experiments. Static diagrams are fully visible; small models perform actual local training and numerical simulations. The homepage offers a small line-fitting example, a direct start at lecture 1, and links to the lecturer’s Tsinghua profile and academic website. The lecture selector and chapter introductions use brief, plain-language summaries. There are no accounts, saved notes or course-administration pages.
 
-Guided visual workbenches explain convolution, attention, neural-network training and the Transformer. Playback includes pause, single steps, step back and speed controls. It pauses when an experiment leaves the screen or the tab is hidden, and reduced-motion preferences disable transitions. K-means also compares seeded fits visually. A collapsible chapter outline links to sections; reading resume works without a floating navigation bar.
+Each course experiment begins with a concrete first action. Its main diagram and result appear first; full calculations, extra controls, and reflection questions open on request. Guided examples cover convolution, attention, backpropagation, neural-network training, PCA, diffusion and the Transformer. Play, Previous and Next sit below the visual. Playback pauses when the visual leaves the screen, the tab is hidden, or an explanation opens for inspection. Reduced-motion preferences disable transitions. K-means also compares seeded fits visually. A collapsible chapter outline links to sections; reading resume works without a floating navigation bar.
 
 Attention has dominant-key, uniform and blocked-future presets alongside the full Transformer. Its animation traces signed scores, scaling, masking, softmax and each weighted-value contribution. Convolution can build one output from nine products, then bias and activation, or scan the image. Finished calculations can replay with the same controls.
 
-“Pin result” keeps a comparison while you change controls. The comparison lists changed settings, edited array/model entries and numerical result differences for the guided workbenches. “Share setup” provides a link to a fresh run with those controls; trained weights and complete edited arrays are not included. Older tab sessions and setup links preserve their original calculations.
+Under Options, “Undo change” reverses a parameter edit or training action, while Previous revisits a calculation step. “Pin result” keeps a comparison while you change controls; numerical differences and duplicate result panels open on request. The comparison lists changed settings, edited array/model entries and numerical result differences for the guided workbenches. “Share setup” provides a link to a fresh run with those controls; trained weights and complete edited arrays are not included. Older tab sessions and setup links preserve their original calculations.
 
 ## Run locally
 

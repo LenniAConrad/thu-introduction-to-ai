@@ -1,7 +1,7 @@
 import {esc,fmt} from './render.js';
 import {convolution,trainingPreview,mlpForward} from './deep-learning-math.js';
 import {transformer,targetVocabulary} from './transformer-math.js';
-import {numberGrid as grid,convolutionView as convView,convolutionTrace,attentionView,attentionTrace,attentionDetails,attentionExamples,attentionSteps} from './calculation-stories.js';
+import {numberGrid as grid,convolutionView as convView,convolutionTrace,attentionView,attentionTrace,attentionDetails,attentionExamples,attentionSteps,attentionStageIndex} from './calculation-stories.js';
 import {networkView,networkResult,networkStages,inspectNetwork,pcaView,pcaResult,pcaCompare,diffusionView,diffusionCompare} from './model-stories.js';
 import {diffusionBatch,seededRandom,normal} from './sequence-generative-math.js';
 
@@ -40,7 +40,8 @@ function architectureView(s,interactive=true){
  const matrices=[r.sourceInput.map(x=>x.input),r.encoderAttention.output,r.encoderAdd.output,r.encoderFF.output,r.encoderFinal.output,r.targetInput.map(x=>x.input),r.decoderAttention.output,r.decoderAdd.output,r.crossAttention.output,r.crossAdd.output,r.decoderFF.output,r.decoderFinal.output,r.logits,r.probabilities];
  const i=stageNames.indexOf(s.stage),a=matrices[i];
  const lane=(name,start,end)=>`<section><h4>${name}</h4><ol>${stageNames.slice(start,end).map((stage,j)=>{const n=start+j;return `<li>${interactive?pick('stage',stage,`${shortNames[n]}<small>${matrices[n].length} × ${matrices[n][0].length}</small>`,i===n):`<span>${shortNames[n]}</span>`}${n===8?'<p class="memory-link">↖ Encoder memory supplies K and V</p>':''}</li>`}).join('')}</ol></section>`;
- return `<div class="transformer-map" data-visual="architecture">${lane('Encoder · source',0,5)}${lane('Decoder · target',5,12)}${lane('Prediction',12,14)}</div><div class="stage-explanation"><strong>${i+1} / 14 · ${esc(s.stage)}</strong><p>${stageNotes[i]}</p></div><div class="stage-matrix">${grid(a,{title:`Output · ${a.length} tokens × ${a[0].length} coordinates`,scale:3})}</div>`;
+ const phase=i<5?0:i<12?1:2,tokens=i<5?r.source:r.target;
+ return `<div class="transformer-story" data-visual="architecture"><ol class="transformer-phases" aria-label="Computation path">${['Encoder','Decoder','Prediction'].map((name,j)=>`<li ${j===phase?'aria-current="step"':''}>${name}</li>`).join('')}</ol><div class="stage-explanation transformer-operation"><strong>${esc(shortNames[i])}</strong><p>${stageNotes[i]}</p></div><div class="stage-matrix">${grid(a,{title:`Output · ${a.length} tokens × ${a[0].length} coordinates`,scale:3})}<p class="visual-key">Rows: ${tokens.map(esc).join(' · ')}${i>=12?`<br>Columns: ${targetVocabulary.map(esc).join(' · ')}`:''}</p></div><details class="architecture-overview" data-morph-key="full-architecture"><summary>Full architecture · 14 stages</summary><div class="transformer-map">${lane('Encoder · source',0,5)}${lane('Decoder · target',5,12)}${lane('Prediction',12,14)}</div></details></div>`;
 }
 function changeOutcome(before,after){return Math.abs(before-after)<1e-10?'unchanged':after<before?'lower':'higher'}
 const directionOptions=[['lower','Lower'],['higher','Higher'],['unchanged','Unchanged']];
@@ -62,7 +63,7 @@ export function enhanceLabs(definitions){
   };
  };
  attach('dl-convolution',{
-  primary:['scene','kernel','playMode'],visual:convView,snapshot:s=>convView(s,false),
+  primary:['scene','kernel'],visual:convView,snapshot:s=>convView(s,false),
   defaults:{cell:2,convStep:0,playMode:'Explain this cell'},
   controls:[{id:'playMode',label:'Playback',type:'select',options:['Explain this cell','Scan image']}],
   normalize(s){s.convStep??=0;s.playMode??='Explain this cell'},
@@ -88,13 +89,13 @@ export function enhanceLabs(definitions){
   visible(s,k){const full=s.attentionExample==='Full Transformer';if(k==='causal')return s.attentionExample==='Blocked future token'||full&&s.stage==='Decoder self-attention';if(k==='future')return full&&s.stage!=='Encoder self-attention';return !['source','stage','heads','head','positions'].includes(k)||full},
   bounds:(s,k)=>k==='query'&&s.attentionExample!=='Full Transformer'?{min:0,max:2}:null,
   change(s,k,base){if(s.attentionExample==='Full Transformer')base.change?.(s,k);if(k==='attentionExample'){s.query=0;s.causal=true;s.scale=true}if(k!=='viewStep')s.viewStep=0;s.mixCount=0},
-  details:(s,base)=>s.attentionExample==='Full Transformer'?base.render(s):attentionDetails(s),
+  details:(s,base)=>attentionStageIndex(s)+(s.attentionExample==='Full Transformer'?base.render(s):attentionDetails(s)),
   describe(s){const {h,keys}=attentionTrace(s),count=Math.min(s.mixCount,keys.length),total=h.v[0].map((_,c)=>h.v.slice(0,count).reduce((sum,v,j)=>sum+v[c]*h.weights[s.query][j],0));return `Query ${s.query}. ${attentionSteps[s.viewStep]}.${s.viewStep===4?` ${count} of ${keys.length} contributions added. Total ${vector(total)}.`:''}`},
   metrics(s){const {h,keys}=attentionTrace(s),q=s.query;return [...keys.map((k,j)=>({key:'weight'+j,label:`Query ${q} → key ${j} (${k})`,value:h.weights[q][j]*100,unit:'%'})),...h.mixed[q].map((v,j)=>({key:'value'+j,label:`Output coordinate ${j+1}`,value:v}))]},
   timeline:{max:s=>4+attentionTrace(s).keys.length,get:s=>s.viewStep+(s.viewStep===4?s.mixCount:0),seek(s,n){s.viewStep=Math.min(4,n);s.mixCount=Math.max(0,n-4)},label:s=>s.viewStep<4?attentionSteps[s.viewStep]:`Value contributions ${s.mixCount} / ${attentionTrace(s).keys.length}`},
   compare(before,after){const a=attentionTrace(before),b=attentionTrace(after);if(a.keys.length!==b.keys.length)return '<p>Key counts differ; compare the labeled results below.</p>';return `<div class="visual-comparison"><p><strong>Attention weight changes</strong> · percentage points, current − pinned</p>${b.keys.map((key,i)=>{const delta=100*(b.h.weights[after.query][i]-a.h.weights[before.query][i]);return `<div class="attention-delta"><span>${esc(a.keys[i]===key?key:a.keys[i]+' → '+key)}</span><div class="signed-score-track ${delta<0?'is-negative':''}"><span style="left:${delta<0?50+delta/2:50}%;width:${Math.abs(delta)/2}%"></span></div><strong>${delta>0?'+':''}${fmt(delta,2)} pp</strong></div>`}).join('')}<p class="visual-key">Fixed scale −100 to +100 pp. Compare the selected query and token labels when changing examples.</p></div>`},
   label:'Follow one query through attention',
-  play:{label:'Walk through attention',finished:s=>s.viewStep>=4&&s.mixCount>=attentionTrace(s).keys.length,
+  play:{label:'Walk through attention',interval:1600,finished:s=>s.viewStep>=4&&s.mixCount>=attentionTrace(s).keys.length,
    restart(s){s.viewStep=0;s.mixCount=0},
    tick(s){if(this.finished(s))return false;if(s.viewStep<4)s.viewStep++;else s.mixCount++;return true}},
   prediction:{question:'With the decoder causal mask on, will changing future token 2 alter query 0’s output? This check uses a controlled decoder example.',options:[['unchanged','It stays the same'],['changed','It changes']],
@@ -106,7 +107,7 @@ export function enhanceLabs(definitions){
   arrays:[['model.weights','Fitted weights']],
   compare(before,after){const deltas=Array.from({length:20},(_,y)=>Array.from({length:20},(_,x)=>{const p=[-1.2+(x+.5)*.12,1.2-(y+.5)*.12];return mlpForward(after.model.weights,p).p-mlpForward(before.model.weights,p).p}));return `<div class="visual-comparison"><p><strong>Prediction change across the input field</strong></p><svg viewBox="0 0 240 245" class="probability-difference" role="img" aria-label="Change in probability of class 1, current minus pinned; fixed axes from minus 1.2 to 1.2.">${deltas.map((row,y)=>row.map((v,x)=>`<rect x="${20+x*10}" y="${10+y*10}" width="10.1" height="10.1" fill="${v>=0?purple:orange}" opacity="${Math.abs(v)}"><title>Input ${fmt(-1.2+(x+.5)*.12,2)}, ${fmt(1.2-(y+.5)*.12,2)}: change ${fmt(v,5)}</title></rect>`).join('')).join('')}<path d="M20 10V210H220" fill="none" stroke="#96819c"/><g font-size="12" fill="#655b68"><text x="20" y="228">−1.2</text><text x="200" y="228">1.2</text><text x="113" y="243">x₁</text></g></svg><p class="visual-key">Purple: higher p(class 1) · orange: lower · white: unchanged. Full color = probability change of 1; vertical x₂ also spans −1.2 to 1.2.</p></div>`},
   label:'Watch the boundary learn from data',
-  play:{label:'Train with animation',tick(s){const before=s.model.updates;definitions['dl-training'].action(s,'step');return s.model.updates>before}},
+  play:{label:'Train with animation',interval:240,tick(s){const before=s.model.updates;definitions['dl-training'].action(s,'step');return s.model.updates>before}},
   prediction:{question:'After one batch update, what will happen to the loss on that same batch?',options:directionOptions,
    run(s){const updates=s.model.updates;definitions['dl-training'].action(s,'step');const p=s.model.last;if(s.model.updates===updates)return {answer:'unchanged',text:'No update was applied: the run reached its numerical or update limit. Reset to try another run.'};return {answer:changeOutcome(p.before,p.after),text:`Same-batch loss ${fmt(p.before,5)} → ${fmt(p.after,5)}. A step is not guaranteed to improve loss: learning rate, momentum and batch composition matter.`}}}
  });
@@ -115,7 +116,7 @@ export function enhanceLabs(definitions){
   metrics(s){const r=transformer(s.source.split(' '),s.future?['<bos>','como','azul']:['<bos>','como','estas'],{heads:s.heads,usePositions:s.positions,causal:s.causal,scale:s.scale});return r.probabilities[0].map((v,j)=>({key:'p'+j,label:`Query 0 · ${targetVocabulary[j]}`,value:v*100,unit:'%'}))},
   label:'Trace the encoder and decoder',
   timeline:{max:()=>13,get:s=>stageNames.indexOf(s.stage),seek(s,n){s.stage=stageNames[n]},label:s=>`${stageNames.indexOf(s.stage)+1} / 14 · ${s.stage}`},
-  play:{label:'Trace computation',finished:s=>s.stage===stageNames.at(-1),restart(s){s.stage=stageNames[0]},tick(s){const i=stageNames.indexOf(s.stage);if(i>=stageNames.length-1)return false;s.stage=stageNames[i+1];return true}}
+  play:{label:'Trace computation',interval:1800,finished:s=>s.stage===stageNames.at(-1),restart(s){s.stage=stageNames[0]},tick(s){const i=stageNames.indexOf(s.stage);if(i>=stageNames.length-1)return false;s.stage=stageNames[i+1];return true}}
  });
  attach('dl-network',{
   primary:['preset','eta','target'],defaults:{networkStep:0,inspectNetwork:null},normalize(s){s.networkStep??=0;s.inspectNetwork??=null},
@@ -124,15 +125,15 @@ export function enhanceLabs(definitions){
   action(s,a,base){base.action(s,a);s.networkStep=0;s.inspectNetwork=null},
   describe:s=>`${networkStages[s.networkStep]}. Loss ${fmt(networkResult(s).loss,6)}; ${s.updates} applied updates.`,
   timeline:{max:()=>7,get:s=>s.networkStep,seek(s,n){s.networkStep=n;s.inspectNetwork=null},label:s=>`${s.networkStep+1} / 8 · ${networkStages[s.networkStep]}`},
-  play:{label:'Trace backpropagation',finished:s=>s.networkStep===7,restart(s){s.networkStep=0;s.inspectNetwork=null},tick(s){if(s.networkStep===7)return false;s.networkStep++;s.inspectNetwork=null;return true}},
+  play:{label:'Trace backpropagation',interval:1800,finished:s=>s.networkStep===7,restart(s){s.networkStep=0;s.inspectNetwork=null},tick(s){if(s.networkStep===7)return false;s.networkStep++;s.inspectNetwork=null;return true}},
   metrics(s){const r=networkResult(s);return [{key:'prediction',label:'Output',value:r.y},{key:'loss',label:'Squared loss',value:r.loss},...r.gradient.map((v,i)=>({key:'g'+i,label:`∂L/∂w${i+1}`,value:v}))]},
  });
  attach('pca',{
   primary:['dataset','scale'],defaults:{pcaPoint:0},normalize(s){s.pcaPoint??=0},visible:(s,k)=>k!=='angle',
   label:'Rotate the projection and measure what remains',visual:pcaView,snapshot:(s,peer)=>pcaView(s,false,peer),compare:pcaCompare,
   change(s,k){if(k==='dataset')s.pcaPoint=0},inspect(s,key){if(/^p\d+$/.test(key)&&Number(key.slice(1))<pcaResult(s).scores.length)s.pcaPoint=Number(key.slice(1))},
-  timeline:{max:()=>179.99,step:.01,get:s=>s.angle,seek(s,n){s.angle=n},label:s=>`Projection angle ${fmt(s.angle,2)}° · ${fmt(pcaResult(s).fraction*100,2)}% retained`},
-  play:{label:'Rotate the projection',finished:s=>s.angle>=179.99,restart(s){s.angle=0},tick(s){if(s.angle>=179.99)return false;s.angle=Math.min(179.99,s.angle+5);return true}},
+  timeline:{max:()=>179.99,step:.01,previousStep:3,get:s=>s.angle,seek(s,n){s.angle=n},label:s=>`Projection angle ${fmt(s.angle,2)}°`},
+  play:{label:'Rotate the projection',interval:140,finished:s=>s.angle>=179.99,restart(s){s.angle=0},tick(s){if(s.angle>=179.99)return false;s.angle=Math.min(179.99,s.angle+3);return true}},
   metrics(s){const r=pcaResult(s);return [{key:'variance',label:'Retained variance',value:r.fraction*100,unit:'%'},{key:'error',label:'Mean squared reconstruction error',value:r.discarded}]},
  });
  const diffusion=definitions['sg-diffusion'];

@@ -43,18 +43,49 @@ export function applySetup(def,values){
 // This also keeps focus and expanded calculations stable during a model update.
 export function morph(parent,html){
  const template=parent.ownerDocument.createElement('template');template.innerHTML=html;
+ const focused=parent.contains(parent.ownerDocument.activeElement)?parent.ownerDocument.activeElement:null;
+ const selection=focused&&typeof focused.selectionStart==='number'?[focused.selectionStart,focused.selectionEnd]:null;
+ function key(node){
+  if(node?.nodeType!==1)return null;
+  for(const name of ['data-morph-key','data-ui','data-param','data-direct','data-story-inspect','data-lab-action'])if(node.hasAttribute(name))return name+':'+node.getAttribute(name);
+  if(node.hasAttribute('data-lab-set'))return 'set:'+node.getAttribute('data-lab-set')+':'+node.getAttribute('data-value');
+  if(node.tagName==='DETAILS')return 'details:'+node.querySelector('summary')?.textContent;
+  return null;
+ }
  function patch(old,next){
   if(!old||old.nodeType!==next.nodeType||old.nodeName!==next.nodeName){const n=next.cloneNode(true);if(old)old.replaceWith(n);return n}
   if(old.nodeType===3){if(old.nodeValue!==next.nodeValue)old.nodeValue=next.nodeValue;return old}
   if(old.nodeType!==1)return old;
   for(const a of [...old.attributes])if(!next.hasAttribute(a.name)&&!(a.name==='open'&&old.tagName==='DETAILS'))old.removeAttribute(a.name);
-  for(const a of [...next.attributes])if(old.getAttribute(a.name)!==a.value)old.setAttribute(a.name,a.value);
-  children(old,next);return old;
+  for(const a of [...next.attributes])if(!(a.name==='open'&&old.tagName==='DETAILS')&&old.getAttribute(a.name)!==a.value)old.setAttribute(a.name,a.value);
+  children(old,next);
+  // Setting a value attribute does not update an input after the user has edited
+  // it. Keep direct editors correct when selecting another cell or undoing.
+  if(old.tagName==='INPUT'){
+   if(['checkbox','radio'].includes(old.type))old.checked=next.checked;
+   else if(old.value!==next.value&&!(old===old.ownerDocument.activeElement&&old.type==='number'&&old.value!==''&&Number(old.value)===Number(next.value)))old.value=next.value;
+  }else if(old.tagName==='SELECT'||old.tagName==='TEXTAREA'){if(old.value!==next.value)old.value=next.value}
+  return old;
  }
  function children(old,next){
   const nodes=[...next.childNodes];
-  nodes.forEach((n,i)=>{if(old.childNodes[i])patch(old.childNodes[i],n);else old.append(n.cloneNode(true))});
+  nodes.forEach((n,i)=>{
+   const k=key(n),current=old.childNodes[i];
+   if(k){
+    const match=[...old.childNodes].slice(i).find(candidate=>key(candidate)===k);
+    if(match){if(match!==current)old.insertBefore(match,current||null);patch(match,n)}
+    else old.insertBefore(n.cloneNode(true),current||null);
+   }else if(current&&!key(current))patch(current,n);
+   else old.insertBefore(n.cloneNode(true),current||null);
+  });
   while(old.childNodes.length>nodes.length)old.lastChild.remove();
  }
  children(parent,template.content);
+ // Moving a retained element can still blur its focused descendant in browsers.
+ // Restore that same control without scrolling the diagram away from the user.
+ if(focused?.isConnected&&parent.contains(focused)&&!focused.disabled&&parent.ownerDocument.activeElement!==focused){
+  let visible=true;
+  for(let p=focused;p&&p!==parent;p=p.parentElement)if(p.hidden||p.tagName==='DETAILS'&&!p.open&&!p.querySelector('summary')?.contains(focused)){visible=false;break}
+  if(visible){focused.focus({preventScroll:true});if(selection)focused.setSelectionRange(...selection)}
+ }
 }

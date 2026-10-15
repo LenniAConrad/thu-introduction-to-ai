@@ -104,7 +104,9 @@ export function mountLab(host,id,{session=null,setup=null}={}){
   // These are previews of copied state; they never train or advance the live model.
   return Array.from({length:max+1},(_,step)=>{const preview=copy(state);timeline.seek(preview,step);return guide.visual(preview)});
  }});
- const layoutKey=()=>JSON.stringify(def.controls.filter(c=>c.type==='select'||c.type==='checkbox').map(c=>state[c.id]).concat(guide?.timeline?.max(state)??null));
+ // Every Transformer stage was measured together; changing the playhead must
+ // not render all fourteen stages again on each animation frame.
+ const layoutKey=()=>JSON.stringify(def.controls.filter(c=>(c.type==='select'||c.type==='checkbox')&&!(id==='tf-transformer'&&c.id==='stage')).map(c=>state[c.id]).concat(guide?.timeline?.max(state)??null));
  const control=c=>`<label data-control-label="${c.id}" data-control-type="${c.type}"><span class="control-name">${esc(controlLabel(c.label))}</span>${c.type==='range'?` <output data-output="${c.id}">${fmt(state[c.id],5)}</output><input type="range" data-param="${c.id}" aria-label="${esc(controlLabel(c.label))}" min="${c.min}" max="${c.max}" step="${c.step}" value="${state[c.id]}">`:c.type==='select'?`<select data-param="${c.id}" aria-label="${esc(controlLabel(c.label))}">${c.options.map(o=>`<option value="${esc(o)}" ${String(state[c.id])===o?'selected':''}>${esc(controlOptionLabel(o))}</option>`).join('')}</select>`:c.type==='checkbox'?`<input type="checkbox" data-param="${c.id}" ${state[c.id]?'checked':''}>`:`<input type="text" aria-label="${esc(controlLabel(c.label))}" data-param="${c.id}" value="${esc(state[c.id])}" maxlength="1000">`}</label>`;
  function makeControls(){controls.innerHTML=def.controls.filter(c=>primary.includes(c.id)).map(control).join('')+`<details class="advanced-controls" ${mode==='explore'?'open':''}><summary>More controls</summary><div>${def.controls.filter(c=>!primary.includes(c.id)).map(control).join('')}</div></details>`;controls.querySelector('.advanced-controls').hidden=def.controls.every(c=>primary.includes(c.id))}
  function save(){if(!session)return;session.write('lab:'+id,{state,pinned,prediction,answer,mode})}

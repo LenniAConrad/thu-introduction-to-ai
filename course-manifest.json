@@ -23,7 +23,10 @@
     "animated-computation",
     "pinned-comparisons",
     "session-resume",
-    "shareable-setups"
+    "shareable-setups",
+    "attention-presets",
+    "calculation-traces",
+    "comparison-deltas"
   ],
   "conceptLinks": [
     {
@@ -51,6 +54,6 @@
       "route": "#/lesson/infrastructure/infrastructure-2"
     }
   ],
-  "experienceVersion": 4,
+  "experienceVersion": 5,
   "persistence": "session"
 }

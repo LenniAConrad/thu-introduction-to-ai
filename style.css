@@ -1056,3 +1056,44 @@ button.array-cell:hover{box-shadow:inset 0 0 0 2px #b296bd;z-index:1}
 @media(prefers-reduced-motion:reduce){.enhanced-lab[data-lab=kmeans] svg circle,.enhanced-lab[data-lab=kmeans] svg rect{transition:none}}
 @media(max-width:760px){.mobile-header{min-height:62px}}
 .array-cell{background-color:#f8f2fa;background-color:color-mix(in srgb,var(--cell-color) calc(var(--intensity)*100%),white)}
+
+/* Calculation playback: stable geometry, one current operation, deliberate motion. */
+.array-cell.is-working{box-shadow:inset 0 0 0 3px #187d86;background-color:#d8f1ed;color:#124f55;z-index:2}
+.calculation-story{margin:22px 0 0}
+.calculation-progress{display:flex;align-items:center;justify-content:space-between;gap:16px;color:#765e80;font-size:.76rem;font-variant-numeric:tabular-nums}
+.calculation-progress progress{width:34%;height:5px;accent-color:#187d86}
+.calculation-story>.stage-explanation{min-height:3.4em}
+.product-strip>span{opacity:.48;transition:opacity 280ms ease,background-color 280ms ease,border-color 280ms ease,box-shadow 280ms ease}
+.product-strip>.is-computed{opacity:1}
+.product-strip>.is-current{background:#e1f2ef;border-color:#519f9f;box-shadow:0 2px 8px #187d861a}
+.product-strip>.is-current strong{color:#145e64}
+.product-strip strong{min-height:1.3em;font-variant-numeric:tabular-nums}
+.calculation-story .experiment-outcome{margin-bottom:0}
+.example-caption{margin:0 0 16px;color:#80638c;font-size:.75rem!important;line-height:1.7}
+.score-axis{display:flex;justify-content:space-between;gap:8px;font-size:.65rem;color:#7e6a86;font-variant-numeric:tabular-nums}
+.signed-score-track{height:12px;margin:8px 0;position:relative;background:#eee5f1;border-radius:3px;overflow:hidden}
+.signed-score-track:after{content:'';position:absolute;left:50%;top:0;bottom:0;width:1px;background:#87748e}
+.signed-score-track>span{position:absolute;top:2px;bottom:2px;background:#804197;border-radius:2px;transition:width 480ms var(--motion-ease),left 480ms var(--motion-ease),background-color 280ms ease}
+.signed-score-track.is-negative>span{background:#bb592c}
+.is-masked .signed-score-track{background:repeating-linear-gradient(135deg,#f4eff5 0,#f4eff5 4px,#dcd0e1 4px,#dcd0e1 5px)}
+.attention-connection{border-left:3px solid transparent;padding:5px 9px;transition:background-color 280ms ease,border-color 280ms ease}
+.attention-connection.is-current{border-left-color:#187d86;background:#e8f5f2;border-radius:0 5px 5px 0}
+.value-contribution{opacity:.45;transition:opacity 280ms ease}
+.is-computed .value-contribution{opacity:1}
+.contribution-status{display:block;font: .65rem/1.5 var(--sans,system-ui);color:#6b6373;margin-top:3px}
+.is-current .contribution-status{color:#186b70;font-weight:650}
+.attention-connection.is-current .value-contribution strong,.product-strip>.is-current strong{animation:calculation-arrive 360ms ease-out}
+@keyframes calculation-arrive{from{opacity:.3}to{opacity:1}}
+.comparison-differences{margin:6px 0 22px}
+.comparison-table-wrap{overflow-x:auto;max-width:100%;margin:16px 0;border:1px solid #e0d2e7;border-radius:8px;background:#fff}
+.difference-table{width:100%;min-width:24rem;border-collapse:collapse;font-size:.76rem;line-height:1.65;margin:0;font-variant-numeric:tabular-nums}
+.difference-table caption{text-align:left;padding:12px 14px;font-weight:650;color:#694477;background:#f7f1fa}
+.difference-table th,.difference-table td{padding:9px 12px;border-bottom:1px solid #eee5f2;vertical-align:top}
+.difference-table th{font-size:.68rem;text-align:left;color:#7c6587;font-weight:600}
+.difference-table td:first-child{width:40%;color:#63466f}
+.difference-table tr:last-child td{border-bottom:0}
+.comparison-match,.comparison-note{font-size:.75rem!important;color:#7a6684;line-height:1.7}
+.array-differences{border:0;background:transparent;padding:8px 0;margin:6px 0}
+.array-differences>summary{font-size:.78rem;color:#6b4a79}
+@container experiment (max-width:650px){.calculation-story>.stage-explanation{min-height:5.1em}.attention-flow{gap:12px}.attention-connection{padding:5px 6px}}
+@container experiment (max-width:380px){.calculation-progress{font-size:.7rem;gap:10px}.calculation-progress progress{width:26%}.calculation-story>.stage-explanation{min-height:0}.difference-table{font-size:.72rem}.difference-table th,.difference-table td{padding:8px}}

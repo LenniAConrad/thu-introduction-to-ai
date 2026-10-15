@@ -8,7 +8,9 @@ The 13 lectures contain 329 sections, 506 inline questions and 96 browser experi
 
 Guided visual workbenches explain convolution, attention, neural-network training and the Transformer. Playback includes pause, single steps, step back and speed controls. It pauses when an experiment leaves the screen or the tab is hidden, and reduced-motion preferences disable transitions. K-means also compares seeded fits visually. The chapter navigator jumps directly to sections and experiments.
 
-“Pin result” keeps a comparison while you change controls. “Share setup” provides a link to a fresh run with those controls; trained weights and complete edited arrays are not included.
+Attention has dominant-key, uniform and blocked-future presets alongside the full Transformer. Its animation traces signed scores, scaling, masking, softmax and each weighted-value contribution. Convolution can build one output from nine products, then bias and activation, or scan the image. Finished calculations can replay with the same controls.
+
+“Pin result” keeps a comparison while you change controls. The comparison lists changed settings, edited array/model entries and numerical result differences for the guided workbenches. “Share setup” provides a link to a fresh run with those controls; trained weights and complete edited arrays are not included. Older tab sessions and setup links preserve their original calculations.
 
 ## Run locally
 

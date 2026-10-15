@@ -1,52 +1,12 @@
-import {esc,fmt,table} from './render.js';
+import {esc,fmt} from './render.js';
 import {convolution,trainingPreview,mlpForward} from './deep-learning-math.js';
-import {transformer} from './transformer-math.js';
+import {transformer,targetVocabulary} from './transformer-math.js';
+import {numberGrid as grid,convolutionView as convView,convolutionTrace,attentionView,attentionTrace,attentionDetails,attentionExamples,attentionSteps} from './calculation-stories.js';
 
 const purple='#670875',orange='#bb592c';
-const action=(name,label,extra='')=>`<button type="button" class="button subtle small" data-lab-action="${name}" ${extra}>${label}</button>`;
 const pick=(key,value,label,selected=false,extra='')=>`<button type="button" data-lab-set="${key}" data-value="${esc(value)}" aria-pressed="${selected}" ${extra}>${label}</button>`;
 const detail=(name,body)=>`<details class="lab-math"><summary>${name}</summary>${body}</details>`;
-const headline=(label,value,note)=>`<div class="experiment-outcome"><span>${label}</span><strong>${value}</strong><p>${note}</p></div>`;
 const vector=v=>'['+v.map(x=>fmt(x,4)).join(', ')+']';
-const stepper=(steps,selected)=>`<ol class="computation-steps" aria-label="Computation stages">${steps.map((label,i)=>`<li>${pick('viewStep',i,`<span>${i+1}</span>${label}`,selected===i)}</li>`).join('')}</ol>`;
-function grid(a,{key,selected=-1,active=[],title,overlay=null,scale=3}={}){
- const n=a[0].length;
- return `<figure class="interactive-array"><figcaption>${title}</figcaption><div class="array-board" style="--columns:${n}">${a.flat().map((v,i)=>{
-  const extra=`class="array-cell ${active.includes(i)?'in-patch':''} ${i===selected?'is-selected':''}" style="--cell-color:${v>=0?purple:orange};--intensity:${Math.min(.65,Math.abs(v)/scale*.6)}" aria-label="${esc(title)}, row ${Math.floor(i/n)+1}, column ${i%n+1}: ${fmt(v,4)}"`;
-  return key?pick(key,i+1,fmt(v,2),i===selected,extra):`<span ${extra}>${fmt(v,2)}</span>`;
- }).join('')}${overlay||''}</div></figure>`;
-}
-function convView(s,interactive=true){
- const r=convolution(s.image,s.weights,s.bias,s.stride,s.pad),w=r.windows[s.cell-1];
- const output=r.out.map(row=>row.map(v=>s.relu==='On'?Math.max(0,v):v));
- const active=w.products.filter(p=>p.iy>=0&&p.iy<6&&p.ix>=0&&p.ix<6).map(p=>p.iy*6+p.ix);
- const x=Math.max(0,w.x*s.stride-s.pad),y=Math.max(0,w.y*s.stride-s.pad);
- const width=Math.min(6,w.x*s.stride-s.pad+3)-x,height=Math.min(6,w.y*s.stride-s.pad+3)-y;
- const overlay=`<span aria-hidden="true" class="receptive-window" style="left:${x/6*100}%;top:${y/6*100}%;width:${width/6*100}%;height:${height/6*100}%"></span>`;
- return `<div class="convolution-stage" data-visual="convolution">${grid(s.image,{key:interactive?'pixel':null,selected:s.pixel-1,active,title:'Input · 6 × 6',overlay,scale:2})}<span class="computation-symbol" aria-hidden="true">×</span>${grid(s.weights,{key:interactive?'weight':null,selected:s.weight-1,title:'Shared kernel · 3 × 3',scale:2})}<span class="computation-symbol" aria-hidden="true">→</span>${grid(output,{key:interactive?'cell':null,selected:s.cell-1,title:`Output · ${output.length} × ${output.length}`,scale:12})}</div>`+
- headline(`Output (${w.y+1}, ${w.x+1})`,fmt(output[w.y][w.x],4),`Nine products + bias ${fmt(s.bias)}${s.relu==='On'?', then ReLU':''}. The outline marks the input patch used by this output.`)+
- (interactive?`<p class="interaction-hint">Choose an output cell to move the window. Choose an input pixel or kernel weight to edit its value below. Play scans the output from left to right.</p><div class="direct-editors"><label>Input (${Math.floor((s.pixel-1)/6)+1}, ${(s.pixel-1)%6+1}) <input type="number" min="-2" max="2" step="0.1" data-direct="pixelValue" value="${s.pixelValue}"></label><label>Kernel (${Math.floor((s.weight-1)/3)+1}, ${(s.weight-1)%3+1}) <input type="number" min="-2" max="2" step="0.1" data-direct="weightValue" value="${s.weightValue}"></label></div><div class="product-strip" aria-label="Nine products in row order">${w.products.map((p,i)=>`<span style="--order:${i}"><small>${fmt(p.pixel,2)} × ${fmt(p.weight,2)}</small><strong>${fmt(p.product,3)}</strong></span>`).join('')}</div><p class="calculation-line">Σ products ${fmt(w.value-s.bias,4)} + bias ${fmt(s.bias)} = <strong>${fmt(w.value,4)}</strong>${s.relu==='On'?` → ReLU → <strong>${fmt(output[w.y][w.x],4)}</strong>`:''}</p><p class="visual-key">Purple: positive · orange: negative · outlined: selected. Pixel values are a synthetic fixture; the filter uses CNN cross-correlation.</p>`:'');
-}
-function attentionTrace(s){
- const r=transformer(s.source.split(' '),s.future?['<bos>','como','azul']:['<bos>','como','estas'],{heads:s.heads,usePositions:s.positions,causal:s.causal,scale:s.scale});
- const a=s.stage==='Encoder self-attention'?r.encoderAttention:s.stage==='Decoder self-attention'?r.decoderAttention:r.crossAttention;
- return {r,a,h:a.heads[Math.min(s.head||0,s.heads-1)],queries:s.stage==='Encoder self-attention'?r.source:r.target,keys:s.stage==='Decoder self-attention'?r.target:r.source};
-}
-const attentionSteps=['Choose a query','Score the keys','Scale & mask','Normalize','Combine values'];
-function attentionView(s,interactive=true){
- const {h,queries,keys}=attentionTrace(s),q=Math.min(s.query,h.q.length-1),step=s.viewStep||0;
- const raw=h.k.map(k=>k.reduce((sum,v,i)=>sum+v*h.q[q][i],0));
- const explanations=[`Choose a token. Its query vector is ${vector(h.q[q])}. Each token has its own row of weights.`,
-  'Each score is a dot product: matching directions in the query and key increase the score.',
-  `${s.scale?'Divide the dot products by √dₖ.':'Scaling is off.'} ${s.stage==='Decoder self-attention'&&s.causal?'Future keys are masked before softmax.':'All keys shown are available to this query.'}`,
-  'Softmax turns the permitted scores into nonnegative weights that sum to 1. Masked keys receive exactly zero.',
-  'Multiply each value vector by its attention weight, then add coordinate by coordinate. This is one head, before the output projection.'];
- return (interactive?stepper(attentionSteps,step):'')+`<div class="attention-story" data-visual="attention"><div class="query-tokens" aria-label="Select a query token">${queries.map((word,i)=>interactive?pick('query',i,`${esc(word)}<small>query ${i}</small>`,q===i):`<span class="token-static ${q===i?'selected':''}">${esc(word)}</span>`).join('')}</div><p class="stage-explanation">${explanations[interactive?step:4]}</p><div class="attention-flow"><div class="query-source"><small>QUERY ${q}</small><strong>${esc(queries[q])}</strong><span>${vector(h.q[q])}</span></div><div class="attention-destinations">${keys.map((word,j)=>{
-  const masked=h.scores[q][j]===-Infinity,w=h.weights[q][j];
-  const value=step<2?raw[j]:step===2?(masked?'Masked':h.scores[q][j]):w;
-  return `<div class="attention-connection ${masked&&step>=2?'is-masked':''}"><div class="attention-key"><strong>${esc(word)}</strong><small>key ${j}</small><span>${typeof value==='number'?fmt(value,4):value}${step>=3?' weight':''}</span></div><div class="weight-track"><span style="width:${step>=3?w*100:100}%;opacity:${step>=3?1:.25}"></span></div>${step>=4||!interactive?`<p>${fmt(w,4)} × ${vector(h.v[j])} = <strong>${vector(h.v[j].map(v=>v*w))}</strong></p>`:''}</div>`;
- }).join('')}</div></div>`+(step>=4||!interactive?headline('Weighted value output',vector(h.mixed[q]),'Same colors follow the query and its contributions. These are fixed teaching vectors, not a trained translator.'):`<p class="stage-progress">Stage ${step+1} of 5 · ${attentionSteps[step]}</p>`)+`</div>`;
-}
 function trainingPlot(s,interactive=true){
  const r=trainingPreview(s),X=x=>44+(x+1.2)/2.4*312,Y=y=>344-(y+1.2)/2.4*312;
  const cells=Array.from({length:400},(_,i)=>{const x=-1.2+(i%20+.5)*.12,y=-1.2+(Math.floor(i/20)+.5)*.12,p=mlpForward(s.model.weights,[x,y]).p;
@@ -87,28 +47,57 @@ export function enhanceLabs(definitions){
  const attach=(id,config)=>{
   const base=definitions[id];
   definitions[id]={...base,
-   initial:()=>({...base.initial(),viewStep:0}),
-   render(s){return config.visual(s)+detail('Inspect the full calculation',base.render(s))},
+   initial:()=>({...base.initial(),viewStep:0,...config.defaults}),
+   controls:[...(config.controls||[]),...base.controls],
+   normalize:config.normalize,prepareSetup:config.prepareSetup,
+   describe:config.describe||base.describe,
+   visible:config.visible||base.visible,
+   bounds:(s,k)=>config.bounds?.(s,k)??base.bounds?.(s,k),
+   change(s,k){if(config.change)config.change(s,k,base);else base.change?.(s,k)},
+   render(s){return config.visual(s)+detail('Inspect the full calculation',config.details?config.details(s,base):base.render(s))},
    guide:config,
    action(s,a){base.action?.(s,a)},
   };
  };
  attach('dl-convolution',{
-  primary:['scene','kernel','stride'],visual:convView,snapshot:s=>convView(s,false),
+  primary:['scene','kernel','playMode'],visual:convView,snapshot:s=>convView(s,false),
+  defaults:{cell:2,convStep:0,playMode:'Explain this cell'},
+  controls:[{id:'playMode',label:'Playback',type:'select',options:['Explain this cell','Scan image']}],
+  normalize(s){s.convStep??=0;s.playMode??='Explain this cell'},
+  change(s,k,base){base.change?.(s,k);s.convStep=0},
+  describe(s){const t=convolutionTrace(s);return s.playMode==='Scan image'?`Output ${s.cell}: ${fmt(t.activated,4)}.`:`Output ${s.cell}, step ${t.step} of 11. ${t.step===11?'Final output':'Running total'}: ${fmt(t.running,4)}.`},
+  metrics(s){const t=convolutionTrace(s);return [{key:'raw',label:`Raw response at output ${s.cell}`,value:t.w.value},{key:'output',label:`Activated output ${s.cell}`,value:t.activated}]},
+  arrays:[['image','Input pixels'],['weights','Kernel weights']],
   label:'Slide one shared filter across the image',
-  play:{label:'Scan output',tick(s){const n=convolution(s.image,s.weights,s.bias,s.stride,s.pad).windows.length;if(s.cell>=n)return false;s.cell++;return true}},
+  play:{label:'Animate convolution',finished:s=>s.playMode==='Scan image'?s.cell>=convolutionTrace(s).r.windows.length:s.convStep>=11,
+   restart(s){if(s.playMode==='Scan image')s.cell=1;s.convStep=0},
+   tick(s){if(this.finished(s))return false;if(s.playMode==='Scan image')s.cell++;else s.convStep++;return true}},
   prediction:{question:'What happens to this output value if the shared bias increases by 0.5? Keep the current activation.',options:directionOptions,
-   run(s){const value=()=>{const r=convolution(s.image,s.weights,s.bias,s.stride,s.pad).windows[s.cell-1].value;return s.relu==='On'?Math.max(0,r):r};const before=value();s.bias=Math.min(2,s.bias+.5);const after=value();return {answer:changeOutcome(before,after),text:`Output ${fmt(before,4)} → ${fmt(after,4)}. Bias shifts the raw sum; ReLU can keep a negative response at zero. At the bias limit, the setting stays unchanged.`}}}
+   run(s){const value=()=>{const r=convolution(s.image,s.weights,s.bias,s.stride,s.pad).windows[s.cell-1].value;return s.relu==='On'?Math.max(0,r):r};const before=value();s.bias=Math.min(2,s.bias+.5);s.convStep=11;const after=value();return {answer:changeOutcome(before,after),text:`Output ${fmt(before,4)} → ${fmt(after,4)}. Bias shifts the raw sum; ReLU can keep a negative response at zero. At the bias limit, the setting stays unchanged.`}}}
  });
  attach('tf-attention',{
-  primary:['source','stage','causal'],visual:attentionView,snapshot:s=>attentionView({...s,viewStep:4},false),
+  primary:['attentionExample','scale','causal'],visual:attentionView,snapshot:s=>attentionView(s,false),
+  defaults:{attentionExample:'One dominant key',mixCount:0},
+  controls:[{id:'attentionExample',label:'Demonstration',type:'select',options:attentionExamples}],
+  normalize(s){s.attentionExample??='Full Transformer';s.mixCount??=s.viewStep===4?attentionTrace(s).keys.length:0},
+  prepareSetup(s,values){if(!Object.hasOwn(values,'attentionExample'))s.attentionExample='Full Transformer'},
+  visible(s,k){const full=s.attentionExample==='Full Transformer';if(k==='causal')return s.attentionExample==='Blocked future token'||full&&s.stage==='Decoder self-attention';if(k==='future')return full&&s.stage!=='Encoder self-attention';return !['source','stage','heads','head','positions'].includes(k)||full},
+  bounds:(s,k)=>k==='query'&&s.attentionExample!=='Full Transformer'?{min:0,max:2}:null,
+  change(s,k,base){if(s.attentionExample==='Full Transformer')base.change?.(s,k);if(k==='attentionExample'){s.query=0;s.causal=true;s.scale=true}if(k!=='viewStep')s.viewStep=0;s.mixCount=0},
+  details:(s,base)=>s.attentionExample==='Full Transformer'?base.render(s):attentionDetails(s),
+  describe(s){const {h,keys}=attentionTrace(s),count=Math.min(s.mixCount,keys.length),total=h.v[0].map((_,c)=>h.v.slice(0,count).reduce((sum,v,j)=>sum+v[c]*h.weights[s.query][j],0));return `Query ${s.query}. ${attentionSteps[s.viewStep]}.${s.viewStep===4?` ${count} of ${keys.length} contributions added. Total ${vector(total)}.`:''}`},
+  metrics(s){const {h,keys}=attentionTrace(s),q=s.query;return [...keys.map((k,j)=>({key:'weight'+j,label:`Query ${q} → key ${j} (${k})`,value:h.weights[q][j]*100,unit:'%'})),...h.mixed[q].map((v,j)=>({key:'value'+j,label:`Output coordinate ${j+1}`,value:v}))]},
   label:'Follow one query through attention',
-  play:{label:'Walk through attention',tick(s){if(s.viewStep>=4)return false;s.viewStep++;return true}},
+  play:{label:'Walk through attention',finished:s=>s.viewStep>=4&&s.mixCount>=attentionTrace(s).keys.length,
+   restart(s){s.viewStep=0;s.mixCount=0},
+   tick(s){if(this.finished(s))return false;if(s.viewStep<4)s.viewStep++;else s.mixCount++;return true}},
   prediction:{question:'With the decoder causal mask on, will changing future token 2 alter query 0’s output? This check uses a controlled decoder example.',options:[['unchanged','It stays the same'],['changed','It changes']],
-   run(s){Object.assign(s,{stage:'Decoder self-attention',query:0,causal:true,future:false,viewStep:4});const before=attentionTrace(s).h.mixed[0];s.future=true;const after=attentionTrace(s).h.mixed[0];return {answer:before.every((v,i)=>Math.abs(v-after[i])<1e-12)?'unchanged':'changed',text:`Before ${vector(before)} → after ${vector(after)}. Query 0 assigns zero weight to future keys. Turn off the mask in Explore to test leakage.`}}}
+   run(s){Object.assign(s,{attentionExample:'Full Transformer',stage:'Decoder self-attention',query:0,causal:true,future:false,viewStep:4,mixCount:3});const before=attentionTrace(s).h.mixed[0];s.future=true;const after=attentionTrace(s).h.mixed[0];return {answer:before.every((v,i)=>Math.abs(v-after[i])<1e-12)?'unchanged':'changed',text:`Before ${vector(before)} → after ${vector(after)}. Query 0 assigns zero weight to future keys. Turn off the mask in Explore to test leakage.`}}}
  });
  attach('dl-training',{
   primary:['eta','kind','batch'],visual:trainingView,snapshot:(s,peer)=>trainingView(s,false,peer),
+  metrics(s){const r=trainingPreview(s);return [{key:'train',label:'Train loss',value:r.full.loss},{key:'validation',label:'Validation loss',value:r.validation.loss},{key:'accuracy',label:'Train accuracy',value:r.full.accuracy*100,unit:'%'},{key:'updates',label:'Batch updates',value:s.model.updates}]},
+  arrays:[['model.weights','Fitted weights']],
   label:'Watch the boundary learn from data',
   play:{label:'Train with animation',tick(s){const before=s.model.updates;definitions['dl-training'].action(s,'step');return s.model.updates>before}},
   prediction:{question:'After one batch update, what will happen to the loss on that same batch?',options:directionOptions,
@@ -116,12 +105,15 @@ export function enhanceLabs(definitions){
  });
  attach('tf-transformer',{
   primary:['source','causal'],visual:architectureView,snapshot:s=>architectureView(s,false),
+  metrics(s){const r=transformer(s.source.split(' '),s.future?['<bos>','como','azul']:['<bos>','como','estas'],{heads:s.heads,usePositions:s.positions,causal:s.causal,scale:s.scale});return r.probabilities[0].map((v,j)=>({key:'p'+j,label:`Query 0 · ${targetVocabulary[j]}`,value:v*100,unit:'%'}))},
   label:'Trace the encoder and decoder',
-  play:{label:'Trace computation',tick(s){const i=stageNames.indexOf(s.stage);if(i>=stageNames.length-1)return false;s.stage=stageNames[i+1];return true}}
+  play:{label:'Trace computation',finished:s=>s.stage===stageNames.at(-1),restart(s){s.stage=stageNames[0]},tick(s){const i=stageNames.indexOf(s.stage);if(i>=stageNames.length-1)return false;s.stage=stageNames[i+1];return true}}
  });
  // Keep all existing k-means calculations and comparisons; add direct selection.
  const k=definitions.kmeans;
  definitions.kmeans={...k,guide:{primary:['dataset','k','start'],label:'Assign points, then move their centers',
+  arrays:[['model.centers','Centroid coordinates'],['model.labels','Cluster memberships']],
+  metrics(s){const m=s.model,loss=m.labels?m.points.reduce((sum,p,i)=>sum+p.reduce((n,v,j)=>n+(v-m.centers[m.labels[i]][j])**2,0),0):null;return [{key:'objective',label:'Assigned objective J',value:loss},{key:'iterations',label:'Mean updates',value:m.iterations}]},
   play:{label:'Animate clustering',tick(s){if(s.model.stable)return false;k.action(s,'step');return true}}},
   render(s){
    let comparison='';

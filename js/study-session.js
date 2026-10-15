@@ -23,6 +23,7 @@ export function studySession(win){
 export function applySetup(def,values){
  const state=def.initial();
  if(!values||typeof values!=='object'||Array.isArray(values))return state;
+ def.prepareSetup?.(state,values);
  for(const c of def.controls){
   if(!Object.hasOwn(values,c.id))continue;
   const v=values[c.id],bounds=def.bounds?.(state,c.id)||c;

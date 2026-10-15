@@ -1,4 +1,5 @@
 import {enhanceLabs} from './guided-labs.js';
+import {comparisonDetails} from './experiment-comparison.js';
 import {copy,morph,applySetup} from './study-session.js';
 import {readablePlotLabels} from './plot-labels.js';
 import {mdpDefinition as ciMdp,eventsDefinition as ciEvents,ordinalDefinition as ciOrdinal,budgetDefinition as ciBudget,energyDefinition as ciEnergy,occupancyDefinition as ciOccupancy,buildingDefinition as ciBuilding,safetyDefinition as ciSafety} from './infrastructure-models.js';
@@ -86,7 +87,7 @@ export function mountLab(host,id,{session=null,setup=null}={}){
  const saved=session?.read('lab:'+id);
  let state=def.initial(),pinned=null,drag=null,timer=null,saveTimer=null,disposed=false,steps=[],playing=false,playCount=0;
  let prediction=null,answer=null,mode='guided';
- if(saved){try{def.render(saved.state);if(saved.pinned)def.render(saved.pinned);state=saved.state;pinned=saved.pinned||null;prediction=saved.prediction||null;answer=saved.answer||null;mode=saved.mode==='explore'?'explore':'guided'}catch{}}
+ if(saved){try{def.normalize?.(saved.state);if(saved.pinned)def.normalize?.(saved.pinned);def.render(saved.state);if(saved.pinned)def.render(saved.pinned);state=saved.state;pinned=saved.pinned||null;prediction=saved.prediction||null;answer=saved.answer||null;mode=saved.mode==='explore'?'explore':'guided'}catch{}}
  if(setup){state=applySetup(def,setup);pinned=null;prediction=answer=null}
  const primary=guide?.primary||def.controls.slice(0,3).map(c=>c.id);
  host.classList.add('enhanced-lab');
@@ -115,7 +116,7 @@ export function mountLab(host,id,{session=null,setup=null}={}){
   const box=host.querySelector('[data-comparison]');
   if(!pinned){box.innerHTML='';return}
   const params=value=>def.controls.filter(c=>primary.includes(c.id)).map(c=>`${c.label}: ${value[c.id]}`).join(' · ');
-  morph(box,`<section class="pinned-comparison"><header><div><span class="eyebrow">COMPARE RESULTS</span><h4>What changed?</h4></div><button type="button" class="button subtle small" data-ui="unpin">Remove pin</button></header><div class="comparison-panels"><figure><figcaption>Pinned result</figcaption><p class="comparison-settings">${esc(params(pinned))}</p><div class="snapshot">${staticResult(pinned,state)}</div></figure><figure><figcaption>Current result</figcaption><p class="comparison-settings">${esc(params(state))}</p><div class="snapshot">${staticResult(state,pinned)}</div></figure></div></section>`);
+  morph(box,`<section class="pinned-comparison"><header><div><span class="eyebrow">COMPARE RESULTS</span><h4>What changed?</h4></div><button type="button" class="button subtle small" data-ui="unpin">Remove pin</button></header>${comparisonDetails(def,pinned,state)}<div class="comparison-panels"><figure><figcaption>Pinned result</figcaption><p class="comparison-settings">${esc(params(pinned))}</p><div class="snapshot">${staticResult(pinned,state)}</div></figure><figure><figcaption>Current result</figcaption><p class="comparison-settings">${esc(params(state))}</p><div class="snapshot">${staticResult(state,pinned)}</div></figure></div></section>`);
  }
  function predictionHTML(){
   const p=guide?.prediction,box=host.querySelector('[data-prediction]');if(!p)return;
@@ -134,7 +135,8 @@ export function mountLab(host,id,{session=null,setup=null}={}){
    const out=controls.querySelector(`[data-output="${c.id}"]`);if(out)out.textContent=fmt(state[c.id],5);
   }
   ui('play').hidden=ui('next').hidden=host.querySelector('.playback-speed').hidden=!playback;
-  ui('play').textContent=playing?'Pause':'Play';ui('play').setAttribute('aria-label',playing?'Pause animation':playback?.label||'Play');
+  ui('next').disabled=!!playback?.finished?.(state);
+  ui('play').textContent=playing?'Pause':playback?.finished?.(state)?'Replay':'Play';ui('play').setAttribute('aria-label',playing?'Pause animation':playback?.finished?.(state)?'Replay calculation':playback?.label||'Play');
   ui('play').setAttribute('aria-pressed',String(playing));ui('back').disabled=!steps.length;
   for(const name of ['guided','explore'])ui(name).setAttribute('aria-pressed',String(mode===name));
   host.dataset.mode=mode;host.dataset.playing=String(playing);
@@ -143,13 +145,13 @@ export function mountLab(host,id,{session=null,setup=null}={}){
  const reduced=win.matchMedia?.('(prefers-reduced-motion: reduce)');
  function stop(message='Paused. Use Next to inspect one step.'){
   playing=false;if(timer!==null)win.clearTimeout(timer);timer=null;
-  ui('play').textContent='Play';ui('play').setAttribute('aria-label',playback?.label||'Play');ui('play').setAttribute('aria-pressed','false');host.dataset.playing='false';
+  ui('play').textContent=playback?.finished?.(state)?'Replay':'Play';ui('play').setAttribute('aria-label',playback?.finished?.(state)?'Replay calculation':playback?.label||'Play');ui('play').setAttribute('aria-pressed','false');host.dataset.playing='false';
   if(message)playStatus.textContent=message;
  }
  function advance(){
   if(!playback)return false;
-  remember();if(!playback.tick(state)){steps.pop();ui('back').disabled=!steps.length;stop('This sequence is complete. Use Back or Reset to replay it.');return false}
-  draw();return true;
+  remember();if(!playback.tick(state)){steps.pop();ui('back').disabled=!steps.length;stop(playback.restart?'This calculation is complete. Replay starts it again with your current settings.':'This sequence is complete. Use Back or Reset to replay it.');return false}
+  draw();if(playback.finished?.(state)){stop('This calculation is complete. Replay starts it again with your current settings.');return false}return true;
  }
  function tick(){
   timer=null;if(disposed||!playing)return;
@@ -160,6 +162,7 @@ export function mountLab(host,id,{session=null,setup=null}={}){
  }
  function togglePlay(){
   if(playing){stop();announce();return}
+  if(playback?.finished?.(state)&&playback.restart){remember();playback.restart(state);draw()}
   host.dispatchEvent(new win.CustomEvent('lab-play',{bubbles:true,detail:host}));
   playing=true;playCount=0;ui('play').textContent='Pause';ui('play').setAttribute('aria-label','Pause animation');ui('play').setAttribute('aria-pressed','true');host.dataset.playing='true';
   playStatus.textContent=reduced?.matches?'Playing discrete steps; motion effects are disabled.':'Playing. Pause or press Escape to inspect a step.';
@@ -176,7 +179,7 @@ export function mountLab(host,id,{session=null,setup=null}={}){
  const pagehide=()=>{stop('');save()};
  doc.addEventListener('lab-play',externalPlay);doc.addEventListener('visibilitychange',visibility);win.addEventListener('pagehide',pagehide);
  function setParam(key,value){
-  if(key==='viewStep'){remember();state.viewStep=Math.max(0,Math.min(4,Number(value)));draw();return}
+  if(key==='viewStep'){remember();state.viewStep=Math.max(0,Math.min(4,Number(value)));def.change?.(state,key);draw();return}
   const c=def.controls.find(c=>c.id===key);if(!c)return;
   if(c.type==='range'){
    value=Number(value);if(!Number.isFinite(value))return;

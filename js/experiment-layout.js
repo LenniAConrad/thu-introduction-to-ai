@@ -17,18 +17,23 @@ function slots(root){
 }
 
 export function experimentLayout(host,result,{samples=()=>[]}={}){
- let width=0,signature=null,disposed=false;
+ let width=0,signature=null,disposed=false,resultHeight=0;
  const heights=new Map();
  function measure(root){
+  root.style.minHeight='';
   const nodes=slots(root);
   for(const [,node] of nodes)node.style.minHeight='';
   for(const [key,node] of nodes){
    const height=node.getBoundingClientRect().height;
    if(height>0)heights.set(key,Math.max(heights.get(key)||0,Math.ceil(height)));
   }
+  // An open disclosure is intentional expansion, not a new permanent minimum.
+  if(!root.querySelector('details[open]'))resultHeight=Math.max(resultHeight,Math.ceil(root.getBoundingClientRect().height));
  }
  function apply(root){
   for(const [key,node] of slots(root))if(heights.has(key))node.style.minHeight=heights.get(key)+'px';
+  if(!root.querySelector('details[open]'))resultHeight=Math.max(resultHeight,Math.ceil(root.getBoundingClientRect().height));
+  root.style.minHeight=resultHeight+'px';
  }
  function update(key=''){
   if(disposed)return;
@@ -36,7 +41,7 @@ export function experimentLayout(host,result,{samples=()=>[]}={}){
   // A hidden topic has no layout yet. Its first visible resize will measure it.
   if(nextWidth<=0)return;
   const resized=Math.abs(nextWidth-width)>1;
-  if(resized){heights.clear();width=nextWidth}
+  if(resized){heights.clear();resultHeight=0;width=nextWidth}
   if(resized||key!==signature){
    signature=key;
    const frames=samples();

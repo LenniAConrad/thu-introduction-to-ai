@@ -98,11 +98,20 @@ export function mountLab(host,id,{session=null,setup=null}={}){
  const controls=host.querySelector('[data-controls]'),result=host.querySelector('[data-result]'),explanations=host.querySelector('[data-explanations]'),status=host.querySelector('[data-plot-status]');
  const ui=name=>host.querySelector(`[data-ui="${name}"]`);
  const playStatus=host.querySelector('[data-play-status]');
+ function presentation(html){
+  const view=doc.createElement('template');view.innerHTML=presentExperiment(doc,html,{guided:!!guide?.visual,stepAction:!!playback});
+  const details=[...view.content.querySelectorAll('details.lab-math,details.calculation-products,details.cell-editors,details.architecture-overview,details.weight-inspection,details.point-calculation,details[data-morph-key="variance-sweep"]')];
+  const extra=details.map(el=>{el.remove();return el.outerHTML}).join('');
+  return {main:view.innerHTML,extra};
+ }
  const layout=experimentLayout(host,result,{samples(){
   const timeline=guide?.timeline,max=timeline?.max(state);
-  if(!guide?.visual||!Number.isInteger(max)||max>20)return [];
   // These are previews of copied state; they never train or advance the live model.
-  return Array.from({length:max+1},(_,step)=>{const preview=copy(state);timeline.seek(preview,step);return guide.visual(preview)});
+  if(guide?.visual&&Number.isInteger(max)&&max<=20)return Array.from({length:max+1},(_,step)=>{const preview=copy(state);timeline.seek(preview,step);return presentation(guide.visual(preview)).main});
+  // Some training demos add an update record on their first step. Measure that
+  // state before interaction so it cannot push the transport down when it appears.
+  if(!timeline&&def.action){const preview=copy(state);def.action(preview,'step');return [presentation(def.render(preview)).main]}
+  return [];
  }});
  // Every Transformer stage was measured together; changing the playhead must
  // not render all fourteen stages again on each animation frame.
@@ -139,10 +148,8 @@ export function mountLab(host,id,{session=null,setup=null}={}){
  function draw(){
   const html=def.render(state);
   if(!playback&&html.includes('data-lab-action="step"'))playback={label:'Play steps',tick(s){const before=JSON.stringify(s);def.action?.(s,'step');return before!==JSON.stringify(s)}};
-  const view=doc.createElement('template');view.innerHTML=presentExperiment(doc,html,{guided:!!guide?.visual,stepAction:!!playback});
-  const details=[...view.content.querySelectorAll('details.lab-math,details.calculation-products,details.cell-editors,details.architecture-overview,details.weight-inspection,details.point-calculation,details[data-morph-key="variance-sweep"]')];
-  const extra=details.map(el=>{el.remove();return el.outerHTML}).join('');
-  morph(result,view.innerHTML);morph(explanations,extra);
+  const view=presentation(html);
+  morph(result,view.main);morph(explanations,view.extra);
   readablePlotLabels(result);
   readablePlotLabels(explanations);
   layout.update(layoutKey());

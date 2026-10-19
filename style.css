@@ -339,7 +339,7 @@ button{border:0;background:none}
 .empty-state h2{margin-top:20px}
 .empty-state.compact{padding:30px}
 .empty-state p{margin-bottom:15px}
-.startup{max-width:600px;margin:12vh auto;padding:30px}
+.startup{display:grid;place-items:center;min-height:100vh;min-height:100dvh;margin:0;padding:30px;text-align:center}
 .modal-backdrop{position:fixed;inset:0;z-index:70;background:#13281fb3;padding:10vh 20px;display:flex;align-items:start;justify-content:center}
 .search-dialog{width:700px;max-width:100%;max-height:80vh;display:flex;flex-direction:column;background:var(--paper);border-radius:12px;box-shadow:0 20px 70px #0b201b33;overflow:hidden}
 .global-search-input{display:flex;align-items:center;gap:13px;padding:16px 22px;border-bottom:1px solid var(--line)}
